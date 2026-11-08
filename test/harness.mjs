@@ -7,6 +7,7 @@
 //   STATIONMASTER_TEST_RUN    where servers are built. Must be under a temp folder.
 //   STATIONMASTER_TEST_PAPER  26.1.2 (default), 26.2 or 26.3
 //   STATIONMASTER_TEST_JAVA   a Java 25 to run Paper with
+//   STATIONMASTER_TEST_STORAGE  LuckPerms storage: yaml (default) or h2
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, writeFileSync, copyFileSync, mkdirSync, rmSync } from 'node:fs'
 import path from 'node:path'
@@ -19,6 +20,8 @@ export const PAPER = process.env.STATIONMASTER_TEST_PAPER ?? '26.1.2'
 export const BOT_VERSION = '26.1'
 export const VIA = !PAPER.startsWith('26.1')
 export const JAVA = process.env.STATIONMASTER_TEST_JAVA ?? 'java'
+export const STORAGE = process.env.STATIONMASTER_TEST_STORAGE ?? 'yaml'
+if (!['yaml', 'h2'].includes(STORAGE)) throw new Error('STATIONMASTER_TEST_STORAGE must be yaml or h2, not ' + STORAGE)
 const JARS = must('STATIONMASTER_TEST_JARS')
 const EULA = must('STATIONMASTER_TEST_EULA')
 export const RUN = path.resolve(must('STATIONMASTER_TEST_RUN'))
@@ -46,7 +49,7 @@ const jar = re => {
 export const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 /** A brand-new server folder: flat lobby, whitelist on, offline mode so bots can join, 127.0.0.1 only. */
-export function freshServer(name = 'server', { luckperms = true, storage = 'yaml' } = {}) {
+export function freshServer(name = 'server', { luckperms = true, storage = STORAGE } = {}) {
   const dir = path.join(RUN, name)
   rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 })
   mkdirSync(path.join(dir, 'plugins'), { recursive: true })

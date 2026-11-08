@@ -136,7 +136,7 @@ Each change writes a `started` line to `changes.log` before LuckPerms is touched
 
 `./gradlew build` runs the unit tests: config parsing, the safety rules, the warnings and the change log's crash handling.
 
-The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.1 port 25615. Each has LuckPerms, Multiverse-Core, Multiverse-Inventories, made-up worlds and groups, and mineflayer bots as players. Every result that says "blocked" has a check beside it showing the same thing works when it should. See the top of `test/harness.mjs` for setup, then run `node test/acceptance.mjs`. It runs one server at a time and deletes it when the run ends. Set `STATIONMASTER_TEST_KEEP=1` to keep it for a look.
+The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.1 port 25615. Each has LuckPerms, Multiverse-Core, Multiverse-Inventories, made-up worlds and groups, and mineflayer bots as players. Every result that says "blocked" has a check beside it showing the same thing works when it should. See the top of `test/harness.mjs` for setup, then run `node test/acceptance.mjs`. It runs one server at a time and deletes it when the run ends. Set `STATIONMASTER_TEST_KEEP=1` to keep it for a look. LuckPerms uses YAML storage unless `STATIONMASTER_TEST_STORAGE=h2`.
 
 **Passed on Paper 26.1.2, 26.2 and 26.3 (2026-11-07), 100 checks each:**
 
@@ -152,18 +152,20 @@ The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.
 - Restarts, a broken config at reload and at startup, `kill -9` before and after the LuckPerms save, LuckPerms unable to save (a read-only storage folder), and LuckPerms missing.
 - The three events fire, on the main thread, as expected.
 
+**Also passed with LuckPerms on H2 storage, on Paper 26.2 and 26.3 (2026-11-08), 96 checks each:** the same suite, which first checks that LuckPerms really created an H2 database. The four checks for LuckPerms being unable to save are skipped on H2. They work by making YAML's folder read-only, and H2 keeps its database file open, so it can't be made to fail that way.
+
 **How the bots connect:** mineflayer speaks up to 26.1, so on 26.1.2 the bots are native clients. On 26.2 and 26.3 they join as 26.1 clients through ViaVersion and ViaBackwards. Through ViaBackwards (5.12.2 and the 5.12.3 dev build), a 26.1 bot's movement packets get it kicked for "invalid player movement". So on those servers the bots don't send movement. Every teleport in the tests is done by the server, so nothing the tests check depends on it.
 
 **Not tested yet:**
 
 - How the menu's new symbols, colours and hints look in a real client. The bots check which items are where, not how they read.
-
 - A real game client: whether the menu is clear and pleasant for a non-technical admin, and whether the messages read well.
 - Mojang name lookups on a real online-mode server. The tests run offline-mode servers.
 - Leaf Juice itself. Its screen belongs to Leaf Juice; these tests drive the same console commands directly.
 - Waystation gates appearing or disappearing when a profile changes. Waystation decides that from `multiverse.access.<world>`, which LuckPerms changes at once, but no test has watched a gate do it.
 - A Discord bridge. The events were checked with a small test plugin that logs them.
-- MySQL or other LuckPerms storage. The tests use YAML storage.
+- MySQL and other LuckPerms storage besides YAML and H2.
+- LuckPerms failing to save while on H2.
 
 ## Building
 

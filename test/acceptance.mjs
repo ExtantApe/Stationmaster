@@ -3,9 +3,9 @@
 import { chmodSync, existsSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
-import { freshServer, writeConfig, Server, bot, sleep, check, summary, PAPER, results } from './harness.mjs'
+import { freshServer, writeConfig, Server, bot, sleep, check, summary, PAPER, STORAGE, results } from './harness.mjs'
 
-console.log(`# Paper ${PAPER}`)
+console.log(`# Paper ${PAPER}, LuckPerms ${STORAGE} storage`)
 const dir = freshServer('server')
 writeConfig(dir)
 let s = new Server(dir)
@@ -80,6 +80,10 @@ try {
   console.log('\n# Setup: made-up worlds and groups')
   await s.start()
   check(`control: the server really is Minecraft ${PAPER}`, s.log.some(l => l.includes('Starting minecraft server version ' + PAPER)))
+  const lpFiles = readdirSync(path.join(dir, 'plugins/LuckPerms'))
+  check(`control: LuckPerms really uses ${STORAGE} storage`, STORAGE === 'h2'
+    ? lpFiles.some(f => /\.mv\.db$/.test(f)) && !lpFiles.includes('yaml-storage')
+    : lpFiles.includes('yaml-storage'), lpFiles.join(','))
   for (const w of WORLDS) await s.ask(`mv create ${w} normal --world-type flat --no-structures`, 6000)
   await s.ask('mv config enforce-access true', 800)
   for (const g of ['young', 'grown', 'builders', 'young_sky', 'grown_sky', 'admin', 'moderator', 'owner']) await s.ask('lp creategroup ' + g, 400)
@@ -422,6 +426,8 @@ try {
 
   // ---------- LuckPerms failing ----------
   console.log('\n# LuckPerms failing')
+  if (STORAGE !== 'yaml') console.log(`SKIP  LuckPerms failing to save is only forced on YAML storage (a read-only folder). ${STORAGE} keeps its database open, so it can't be made to fail the same way.`)
+  else {
   const users = path.join(dir, 'plugins/LuckPerms/yaml-storage/users')
   chmodSync(users, 0o555)
   from = s.log.length
@@ -433,6 +439,7 @@ try {
   check('a failure event fired', spy(from, /SPY problem code=luckperms_failed/).length === 1)
   check('the attempt is logged as failed', changesLog().some(e => e.event === 'failed' && e.target === 'P_lpfail'))
   check('control: once LuckPerms can save again, the same change works', (await s.sm('apply', offlineUuid('P_lpfail'), 'P_lpfail', '+builders')).status === 'ok')
+  }
 
   // ---------- LuckPerms missing ----------
   console.log('\n# LuckPerms missing')
