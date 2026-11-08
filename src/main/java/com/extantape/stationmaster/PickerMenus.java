@@ -37,7 +37,8 @@ import java.util.UUID;
  */
 final class PickerMenus implements Listener {
 
-    static final int SIZE = 54, CANCEL = 45, INFO = 49, CONFIRM = 53, HEAD = 4;
+    static final int SIZE = 54, CANCEL = 45, OVERFLOW = 47, INFO = 49, CONFIRM = 53, HEAD = 4;
+    static final NamedTextColor ADDED = NamedTextColor.AQUA, REMOVED = NamedTextColor.GOLD;
     static final int[] PROFILE_SLOTS = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
     static final int[] TOGGLE_SLOTS = {28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43};
     static final int[] WARNING_SLOTS = {20, 22, 24, 30, 32};
@@ -104,17 +105,31 @@ final class PickerMenus implements Listener {
         m.slots.clear();
         Settings s = plugin.settings();
         inv.setItem(HEAD, head(m));
-        int pi = 0, ti = 0;
+        int pi = 0, ti = 0, hidden = 0;
         for (Profile p : s.profiles().values()) {
             int[] slots = p.toggle() ? TOGGLE_SLOTS : PROFILE_SLOTS;
             int index = p.toggle() ? ti++ : pi++;
-            if (index >= slots.length) continue;
+            if (index >= slots.length) { hidden++; continue; }
             inv.setItem(slots[index], profileItem(m, p));
             m.slots.put(slots[index], p.id());
         }
-        inv.setItem(CANCEL, item(Material.BARRIER, Component.text("Close without changes", NamedTextColor.RED), List.of()));
+        if (s.profiles().isEmpty()) {
+            inv.setItem(22, item(Material.PAPER, Component.text("No profiles are set up yet", NamedTextColor.WHITE), List.of(
+                    plain(m.approving ? "Approving now gives just the" : "There's nothing to choose here."),
+                    plain(m.approving ? "starting areas." : ""),
+                    plain("Profiles are added in config.yml."))));
+        }
+        if (hidden > 0) {
+            inv.setItem(OVERFLOW, item(Material.PAPER, Component.text(hidden + " more " + (hidden == 1 ? "profile doesn't" : "profiles don't") + " fit here", NamedTextColor.WHITE), List.of(
+                    plain("The menu shows 14 profiles and"),
+                    plain("14 extras. Change the others"),
+                    plain("from the console."))));
+        }
+        inv.setItem(CANCEL, item(Material.BARRIER, Component.text("✘ Close without changes", NamedTextColor.WHITE), List.of(plain("Nothing will change."))));
         inv.setItem(INFO, item(Material.BOOK, Component.text("How this works", NamedTextColor.GOLD), List.of(
                 plain("Click a profile to turn it on or off."),
+                plain("The top rows are main profiles."),
+                plain("The lower rows are extras."),
                 plain("Nothing changes until you press"),
                 plain(m.approving ? "Approve." : "Save."))));
         inv.setItem(CONFIRM, confirmItem(m));
@@ -124,11 +139,11 @@ final class PickerMenus implements Listener {
         List<Component> lore = new ArrayList<>();
         Settings s = plugin.settings();
         if (m.approving) lore.add(plain("Adds " + m.target.name() + " to the whitelist."));
-        if (!m.adds().isEmpty()) lore.add(Component.text("Add: " + labels(s, m.adds()), NamedTextColor.GREEN).decoration(TextDecoration.ITALIC, false));
-        if (!m.removes().isEmpty()) lore.add(Component.text("Remove: " + labels(s, m.removes()), NamedTextColor.RED).decoration(TextDecoration.ITALIC, false));
+        if (!m.adds().isEmpty()) lore.add(Component.text("+ Add: " + labels(s, m.adds()), ADDED).decoration(TextDecoration.ITALIC, false));
+        if (!m.removes().isEmpty()) lore.add(Component.text("− Remove: " + labels(s, m.removes()), REMOVED).decoration(TextDecoration.ITALIC, false));
         if (m.approving && m.wanted.isEmpty()) lore.add(plain("No profiles: just the starting areas."));
         if (!m.approving && m.adds().isEmpty() && m.removes().isEmpty()) lore.add(plain("Nothing to save yet."));
-        return item(Material.LIME_CONCRETE, Component.text(m.approving ? "Approve " + m.target.name() : "Save changes", NamedTextColor.GREEN), lore);
+        return item(Material.LIME_CONCRETE, Component.text("✔ " + (m.approving ? "Approve " + m.target.name() : "Save changes"), NamedTextColor.GREEN), lore);
     }
 
     private ItemStack profileItem(Menu m, Profile p) {
@@ -137,16 +152,20 @@ final class PickerMenus implements Listener {
         boolean on = m.wanted.contains(p.id()), was = m.startOn.contains(p.id());
         List<Component> lore = new ArrayList<>();
         for (String line : p.description()) for (String w : wrap(line, 34)) lore.add(plain(w));
-        String status;
+        // Each state has its own symbol and words, so nothing depends on telling colours apart. The colours are
+        // aqua and gold rather than green and red, the pair colour-blind players most often can't separate.
+        String status, hint;
         NamedTextColor color;
-        if (m.inheritedOnly.contains(p.id())) { status = "Comes from another group"; color = NamedTextColor.AQUA; on = true; }
-        else if (on && was) { status = "On"; color = NamedTextColor.GREEN; }
-        else if (on) { status = "Will be added"; color = NamedTextColor.GREEN; }
-        else if (was) { status = "Will be removed"; color = NamedTextColor.RED; }
-        else { status = "Off"; color = NamedTextColor.DARK_GRAY; }
+        if (m.inheritedOnly.contains(p.id())) { status = "↳ Comes from another group"; color = NamedTextColor.WHITE; hint = "Only the console can change this."; on = true; }
+        else if (on && was) { status = "✔ On"; color = ADDED; hint = "Click to remove."; }
+        else if (on) { status = "+ Will be added"; color = ADDED; hint = "Click to undo."; }
+        else if (was) { status = "− Will be removed"; color = REMOVED; hint = "Click to undo."; }
+        else { status = "○ Off"; color = NamedTextColor.GRAY; hint = "Click to add."; }
+        lore.add(Component.empty());
         lore.add(Component.text(status, color).decoration(TextDecoration.ITALIC, false));
-        if (p.confirm() != null && !on) lore.add(Component.text("Asks for a yes before it's added", NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
-        ItemStack it = item(icon, Component.text(p.label(), on ? NamedTextColor.GREEN : NamedTextColor.WHITE).decoration(TextDecoration.BOLD, on), lore);
+        if (p.confirm() != null && !on) lore.add(Component.text("Asks for a yes before it's added.", NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
+        lore.add(plain(hint));
+        ItemStack it = item(icon, Component.text(p.label(), on ? ADDED : NamedTextColor.WHITE).decoration(TextDecoration.BOLD, on), lore);
         it.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, on);
         return it;
     }
@@ -161,10 +180,10 @@ final class PickerMenus implements Listener {
             if (i >= WARNING_SLOTS.length) break;
             List<Component> lore = new ArrayList<>();
             for (String line : wrap(w.text(), 34)) lore.add(Component.text(line, NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false));
-            inv.setItem(WARNING_SLOTS[i++], item(Material.YELLOW_BANNER, Component.text("Please check", NamedTextColor.YELLOW), lore));
+            inv.setItem(WARNING_SLOTS[i++], item(Material.YELLOW_BANNER, Component.text("⚠ Please check", NamedTextColor.YELLOW), lore));
         }
-        inv.setItem(CANCEL, item(Material.ARROW, Component.text("Go back", NamedTextColor.WHITE), List.of(plain("Nothing has changed yet."))));
-        inv.setItem(CONFIRM, item(Material.LIME_CONCRETE, Component.text("Yes, go ahead", NamedTextColor.GREEN), List.of(plain("Saves the change for " + m.target.name() + "."))));
+        inv.setItem(CANCEL, item(Material.ARROW, Component.text("← Go back", NamedTextColor.WHITE), List.of(plain("Nothing has changed yet."))));
+        inv.setItem(CONFIRM, item(Material.LIME_CONCRETE, Component.text("✔ Yes, go ahead", NamedTextColor.GREEN), List.of(plain("Saves the change for " + m.target.name() + "."))));
     }
 
     private void drawBusy(Menu m) {
@@ -173,8 +192,17 @@ final class PickerMenus implements Listener {
         m.inventory.setItem(22, item(Material.CLOCK, Component.text("Saving…", NamedTextColor.GOLD), List.of()));
     }
 
+    /** The person, with what the server knows of them, so an admin can tell a mistyped stranger from the right account. */
     private ItemStack head(Menu m) {
-        ItemStack head = item(Material.PLAYER_HEAD, Component.text(m.target.name(), NamedTextColor.GOLD), List.of());
+        List<Component> lore = new ArrayList<>();
+        var seen = Bukkit.getOfflinePlayer(m.target.id());
+        JoinAttempts.Attempt tried = plugin.attempts().of(m.target.id());
+        if (seen.hasPlayedBefore()) lore.add(plain("Has played here before."));
+        else if (tried != null) lore.add(plain("Tried to join " + (tried.attempts == 1 ? "once" : tried.attempts + " times") + ", last on " + tried.last.substring(0, 10) + "."));
+        else lore.add(Component.text("⚠ Has never tried to join this server.", NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
+        if (!seen.hasPlayedBefore() && tried == null) lore.add(plain("Check it's the right person."));
+        lore.add(plain(seen.isWhitelisted() ? "On the whitelist." : "Not on the whitelist yet."));
+        ItemStack head = item(Material.PLAYER_HEAD, Component.text(m.target.name(), NamedTextColor.GOLD), lore);
         head.setData(DataComponentTypes.PROFILE, ResolvableProfile.resolvableProfile(Bukkit.createProfile(m.target.id(), m.target.name())));
         return head;
     }

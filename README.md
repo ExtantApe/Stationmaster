@@ -38,6 +38,13 @@ There are three ways to do it:
 - Adding a profile that puts someone in two chat circles at once (see `circle` in the config) asks for a yes first. A profile with a `confirm` question, such as an adults-only world, does too. A yes to one question doesn't cover another.
 - Changes run one at a time. Two admins editing the same person both get their change. If both add the same profile, it's added once.
 - Nothing is changed until Approve or Save is pressed. Closing the menu cancels. Every click in the menu is cancelled, so no item can be taken out.
+- The menu says whether the account has played here, has tried to join, or has never tried. An account that has never tried gets a warning, so a mistyped name that belongs to a stranger is easy to spot.
+
+Children play on the servers this was built for. [docs/kids-first.md](docs/kids-first.md) says how Stationmaster protects them and what it leaves to the people running it. Owner decisions are recorded in [docs/decisions.md](docs/decisions.md).
+
+### The menu
+
+Each profile shows its state in words with a symbol: ✔ On, + Will be added, − Will be removed, ○ Off, or ↳ Comes from another group. On and added are aqua, removed is gold. So the menu reads the same without colour, and it avoids the red and green that colour-blind players most often can't tell apart. Results in chat start with ✔, and errors with ✘. The menu shows up to 14 main profiles and 14 extras. If there are more, it says so, and the rest still work from the console.
 
 ## Install
 
@@ -92,7 +99,7 @@ Each takes a request ID you choose (1 to 64 letters, digits, `.`, `_`, `:` or `-
 | Command | Answers with |
 | --- | --- |
 | `profiles <id>` | The profiles that can be offered, restricted groups, and config problems. |
-| `resolve <id> <name>` | The account's `uuid`, correctly capitalized `name`, and `whitelisted`. |
+| `resolve <id> <name>` | The account's `uuid`, correctly capitalized `name`, `whitelisted`, `playedBefore`, and `triedToJoin` (how many times the whitelist turned it away) with `lastTried`. Warn before approving an account that has neither played nor tried. |
 | `show <id> <uuid or name>` | Their `profiles`, profiles they get `throughOtherGroups`, their `circles`, and `whitelisted`. |
 | `apply <id> <uuid> <name> [+profile] [-profile] [confirm=code,code] [whitelist=no] [via=leaf-juice]` | Adds and removes profiles, then whitelists them unless `whitelist=no`. |
 | `attempts <id>` | People turned away by the whitelist: name, uuid, count, first and last try. |
@@ -113,7 +120,7 @@ stationmaster-result r42 {"status":"ok","code":"applied","message":"Notch is app
 
 ## Events
 
-Stationmaster sends nothing over the network itself, apart from name lookups to Mojang. To post to Discord, listen to these events from another plugin. All fire on the main thread.
+Stationmaster sends nothing over the network itself, apart from name lookups to Mojang. To post to Discord, listen to these events from another plugin. All fire on the main thread. They carry names and profiles, which can show who is a child, so post them only to a channel that just the admins can read.
 
 | Event | When |
 | --- | --- |
@@ -131,7 +138,7 @@ Each change writes a `started` line to `changes.log` before LuckPerms is touched
 
 The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.1 port 25615. Each has LuckPerms, Multiverse-Core, Multiverse-Inventories, made-up worlds and groups, and mineflayer bots as players. Every result that says "blocked" has a check beside it showing the same thing works when it should. See the top of `test/harness.mjs` for setup, then run `node test/acceptance.mjs`. It runs one server at a time and deletes it when the run ends. Set `STATIONMASTER_TEST_KEEP=1` to keep it for a look.
 
-**Passed on Paper 26.1.2, 26.2 and 26.3 (2026-11-07), 98 checks each:**
+**Passed on Paper 26.1.2, 26.2 and 26.3 (2026-11-07), 100 checks each:**
 
 - Approving with each profile alone, several at once, and none. Exactly the right worlds open, by walking in with Multiverse's own `/mvtp`.
 - Removing a profile while the player is in its world. They land in the lobby with their lobby inventory, and their things in that world are still there when it's given back.
@@ -141,13 +148,15 @@ The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.
 - Menu abuse: shift-clicks, number keys, offhand swap, drop, middle click, double click, drags, out-of-range slots, a forged "took the item" packet, Save pressed three times, and closing mid-way.
 - Two admins editing one person at once, and both adding the same profile.
 - The two-circles warning and the adults-only question, by console and in the menu.
-- Names: a stranger approved with other capitals, impossible names, unknown profiles, repeated request IDs.
+- Names: a stranger approved with other capitals, `resolve` telling who tried to join and who never did, impossible names, unknown profiles, repeated request IDs.
 - Restarts, a broken config at reload and at startup, `kill -9` before and after the LuckPerms save, LuckPerms unable to save (a read-only storage folder), and LuckPerms missing.
 - The three events fire, on the main thread, as expected.
 
 **How the bots connect:** mineflayer speaks up to 26.1, so on 26.1.2 the bots are native clients. On 26.2 and 26.3 they join as 26.1 clients through ViaVersion and ViaBackwards. Through ViaBackwards (5.12.2 and the 5.12.3 dev build), a 26.1 bot's movement packets get it kicked for "invalid player movement". So on those servers the bots don't send movement. Every teleport in the tests is done by the server, so nothing the tests check depends on it.
 
 **Not tested yet:**
+
+- How the menu's new symbols, colours and hints look in a real client. The bots check which items are where, not how they read.
 
 - A real game client: whether the menu is clear and pleasant for a non-technical admin, and whether the messages read well.
 - Mojang name lookups on a real online-mode server. The tests run offline-mode servers.

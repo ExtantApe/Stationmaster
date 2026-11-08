@@ -353,6 +353,9 @@ try {
   from = s.log.length
   kicked = await join('CaseTest').then(() => false, () => true)
   check('control: CaseTest is turned away first', kicked)
+  const rc = await s.sm('resolve', 'casetest'), rn = await s.sm('resolve', 'Nobody_here')
+  check('resolve tells Leaf Juice who tried to join and who never did', rc.name === 'CaseTest' && rc.triedToJoin >= 1 && rc.lastTried
+    && rn.triedToJoin === 0 && rn.playedBefore === false, JSON.stringify([rc.triedToJoin, rn.triedToJoin, rn.playedBefore]))
   w = await openMenu(adminA, '/approve casetest')
   check('/approve with other capitals finds the account that tried to join', /CaseTest/.test(JSON.stringify(adminA.currentWindow?.title ?? '')), JSON.stringify(adminA.currentWindow?.title))
   await click(adminA, SLOT.CONFIRM); await sleep(1500)

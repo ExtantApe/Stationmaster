@@ -40,8 +40,9 @@ final class PlayerCommands {
     BasicCommand approve() { return new Command(true); }
     BasicCommand profile() { return new Command(false); }
 
-    static Component bad(String text) { return Component.text(text, NamedTextColor.RED); }
-    static Component good(String text) { return Component.text(text, NamedTextColor.GREEN); }
+    /** Errors and refusals start with ✘ and results with ✔, so they read the same without colour. */
+    static Component bad(String text) { return Component.text("✘ " + text, NamedTextColor.RED); }
+    static Component good(String text) { return Component.text("✔ " + text, NamedTextColor.GREEN); }
     static Component plain(String text) { return Component.text(text, NamedTextColor.GRAY); }
 
     private void run(CommandSender sender, boolean approve, String[] args) {

@@ -77,6 +77,9 @@ public record Settings(boolean ok, String lobbyWorld, Lookup lookup, Set<String>
                     circle == null ? null : circle.toLowerCase(Locale.ROOT),
                     blankToNull(p.getString("confirm")), blankToNull(p.getString("granted")), List.copyOf(description)));
         }
+        long main = profiles.values().stream().filter(p -> !p.toggle()).count(), extras = profiles.size() - main;
+        if (main > 14) problems.add((main - 14) + " main profiles don't fit in the menu, which shows 14. They still work from the console.");
+        if (extras > 14) problems.add((extras - 14) + " extras don't fit in the menu, which shows 14. They still work from the console.");
         return new Settings(true, lobby == null ? "" : lobby.trim(), lookup, Collections.unmodifiableSet(restricted),
                 Collections.unmodifiableMap(profiles), List.copyOf(problems));
     }

@@ -126,7 +126,13 @@ final class ConsoleCommands implements BasicCommand {
                 JsonObject o = ok();
                 o.addProperty("uuid", who.id().toString());
                 o.addProperty("name", who.name());
-                o.addProperty("whitelisted", Bukkit.getOfflinePlayer(who.id()).isWhitelisted());
+                var seen = Bukkit.getOfflinePlayer(who.id());
+                o.addProperty("whitelisted", seen.isWhitelisted());
+                // So Leaf Juice can warn before approving an account that has never come near this server.
+                o.addProperty("playedBefore", seen.hasPlayedBefore());
+                JoinAttempts.Attempt tried = plugin.attempts().of(who.id());
+                o.addProperty("triedToJoin", tried == null ? 0 : tried.attempts);
+                if (tried != null) o.addProperty("lastTried", tried.last);
                 reply(sender, req, o);
             });
         });

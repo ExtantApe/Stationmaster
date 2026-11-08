@@ -86,4 +86,13 @@ class SettingsTest {
         assertFalse(p.opens("builder"));
         assertFalse(p.opens("lobby"));
     }
+
+    @Test
+    void tooManyProfilesForTheMenuIsSaidOutLoud() {
+        StringBuilder y = new StringBuilder("restricted-groups: []\nprofiles:\n");
+        for (int i = 0; i < 16; i++) y.append("  p").append(i).append(": {group: g").append(i).append("}\n");
+        Settings s = Settings.parse(y.toString());
+        assertEquals(16, s.profiles().size(), "they still load");
+        assertTrue(s.problems().stream().anyMatch(p -> p.startsWith("2 main profiles don't fit")), String.valueOf(s.problems()));
+    }
 }

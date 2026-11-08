@@ -69,6 +69,9 @@ public final class JoinAttempts implements Listener {
         return found;
     }
 
+    /** This account's attempt, or null if it hasn't been turned away (or was approved since). */
+    public synchronized Attempt of(UUID id) { return attempts.get(id); }
+
     public synchronized void remove(UUID id) {
         if (attempts.remove(id) != null) save();
     }
