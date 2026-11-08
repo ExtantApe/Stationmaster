@@ -31,3 +31,5 @@ Decisions the owner made for Stationmaster, with dates. Follow them without aski
 - **Paper only:** `paper-api` and `paper-plugin.yml`, not Spigot. (Same source.)
 - **Done well, not just done:** pick the accessible option with good UX where there's a choice, including colours that work for colour-blind players. (Same source.)
 - **Kids come first:** default to children's safety and privacy. (Same source.) See `docs/kids-first.md`.
+- **Releases:** release as soon as it's good, as 0.x versions on GitHub Releases only. Modrinth, Hangar and Spigot wait for the owner's own code review. (Relayed from the tracking chat.)
+- **Public:** the repo went public after the first-public-push audit. Two old example names in early commits are ordinary Minecraft words, and the owner chose to leave history as it is.
