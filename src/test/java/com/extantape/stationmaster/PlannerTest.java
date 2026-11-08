@@ -16,7 +16,7 @@ class PlannerTest {
     void setUp() throws Exception {
         settings = Settings.parse(SettingsTest.defaults());
         store = new FakeStore().group("default").group("young", "default").group("grown", "default").group("builders", "default")
-                .group("young_magic").group("grown_magic").group("admin").group("owner", "admin").group("moderator");
+                .group("young_sky").group("grown_sky").group("admin").group("owner", "admin").group("moderator");
     }
 
     Planner.Plan plan(GroupStore.UserState state, Set<String> add, Set<String> remove, Set<String> confirmed) {
@@ -33,9 +33,9 @@ class PlannerTest {
 
     @Test
     void addsSeveralAtOnce() {
-        var p = plan(store.user("default"), Set.of("young", "builders", "young_magic"), Set.of(), Set.of());
+        var p = plan(store.user("default"), Set.of("young", "builders", "young_sky"), Set.of(), Set.of());
         assertTrue(p.unconfirmed().isEmpty(), String.valueOf(p.unconfirmed()));
-        assertEquals(Set.of("young", "builders", "young_magic"), p.addGroups());
+        assertEquals(Set.of("young", "builders", "young_sky"), p.addGroups());
     }
 
     @Test
@@ -68,9 +68,9 @@ class PlannerTest {
 
     @Test
     void adultToggleAsksForAYesAndAYesForOneThingDoesNotCoverAnother() {
-        var p = plan(store.user("grown"), Set.of("grown_magic"), Set.of(), Set.of());
-        assertEquals("confirm:grown_magic", p.unconfirmed().get(0).code());
-        var both = plan(store.user("young"), Set.of("grown", "grown_magic"), Set.of(), Set.of("confirm:grown_magic"));
+        var p = plan(store.user("grown"), Set.of("grown_sky"), Set.of(), Set.of());
+        assertEquals("confirm:grown_sky", p.unconfirmed().get(0).code());
+        var both = plan(store.user("young"), Set.of("grown", "grown_sky"), Set.of(), Set.of("confirm:grown_sky"));
         assertEquals(1, both.unconfirmed().size());
         assertEquals("bridge", both.unconfirmed().get(0).code());
     }
@@ -141,6 +141,6 @@ class PlannerTest {
         assertTrue(WorldAccess.closed(settings, Set.of("default"), "young_explore_nether"));
         assertFalse(WorldAccess.closed(settings, Set.of("young"), "young_explore_nether"));
         assertFalse(WorldAccess.closed(settings, Set.of("default"), "lobby"));
-        assertTrue(WorldAccess.closed(settings, Set.of("young"), "creative"));
+        assertTrue(WorldAccess.closed(settings, Set.of("young"), "workshop"));
     }
 }

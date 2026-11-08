@@ -171,7 +171,7 @@ The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.
 ./gradlew build
 ```
 
-The jar is written to `build/libs/`. It needs Java 25. Pushing a `v*` tag builds the jar and attaches it to a GitHub Release.
+The jar is written to `build/libs/`. It needs Java 25. Pushing a `v*` tag builds the jar and attaches it to a GitHub Release, with `RELEASE_NOTES.md` as the notes. The release stops if that file names another version. CI also runs `scripts/leak-check.sh`, which looks for email addresses and committed build output.
 
 ## License
 

@@ -39,7 +39,7 @@ profiles:
     worlds: ["young_explore*", young_build]
     circle: young
     granted: "You're cleared for the young explorers' worlds!"
-    description: "The young explorers' survival and build worlds."
+    description: "The young explorers' exploring worlds."
   grown:
     label: "Grown-ups"
     group: grown
@@ -47,28 +47,28 @@ profiles:
     worlds: ["grown_explore*", grown_build]
     circle: grown
     granted: "You're cleared for the grown-ups' worlds!"
-    description: "The grown-ups' survival and build worlds."
+    description: "The grown-ups' exploring worlds."
   builders:
     label: "Builders"
     group: builders
     icon: BRICKS
-    worlds: [creative]
-    granted: "You're cleared for the creative world!"
-    description: "The creative world."
-  young_magic:
-    label: "Magic for young explorers"
-    group: young_magic
+    worlds: [workshop]
+    granted: "You're cleared for the workshop!"
+    description: "The shared building workshop."
+  young_sky:
+    label: "Sky islands for young explorers"
+    group: young_sky
     icon: BLAZE_ROD
     toggle: true
-    worlds: [young_magic]
+    worlds: [young_sky]
     circle: young
-    description: "The young explorers' magic world."
-  grown_magic:
-    label: "Magic for grown-ups"
-    group: grown_magic
+    description: "The young explorers' sky islands."
+  grown_sky:
+    label: "Sky islands for grown-ups"
+    group: grown_sky
     icon: END_ROD
     toggle: true
-    worlds: [grown_magic]
+    worlds: [grown_sky]
     circle: grown
-    confirm: "This magic world is meant for adults. Turn it on?"
-    description: "The grown-ups' magic world."
+    confirm: "These sky islands are meant for adults. Turn it on?"
+    description: "The grown-ups' sky islands."

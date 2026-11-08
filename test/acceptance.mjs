@@ -9,9 +9,9 @@ console.log(`# Paper ${PAPER}`)
 const dir = freshServer('server')
 writeConfig(dir)
 let s = new Server(dir)
-const SLOT = { young: 10, grown: 11, builders: 12, young_magic: 28, grown_magic: 29, CANCEL: 45, CONFIRM: 53 }
-const WORLDS = ['young_explore', 'grown_explore', 'creative', 'grown_magic']
-const ACCESS = { young: ['young_explore'], grown: ['grown_explore'], builders: ['creative'], grown_magic: ['grown_magic'], young_magic: [] }
+const SLOT = { young: 10, grown: 11, builders: 12, young_sky: 28, grown_sky: 29, CANCEL: 45, CONFIRM: 53 }
+const WORLDS = ['young_explore', 'grown_explore', 'workshop', 'grown_sky']
+const ACCESS = { young: ['young_explore'], grown: ['grown_explore'], builders: ['workshop'], grown_sky: ['grown_sky'], young_sky: [] }
 const bots = []
 const join = async name => { const b = await bot(name); bots.push(b); return b }
 const quit = async b => { if (!b) return; b.quit(); await sleep(800) }
@@ -82,7 +82,7 @@ try {
   check(`control: the server really is Minecraft ${PAPER}`, s.log.some(l => l.includes('Starting minecraft server version ' + PAPER)))
   for (const w of WORLDS) await s.ask(`mv create ${w} normal --world-type flat --no-structures`, 6000)
   await s.ask('mv config enforce-access true', 800)
-  for (const g of ['young', 'grown', 'builders', 'young_magic', 'grown_magic', 'admin', 'moderator', 'owner']) await s.ask('lp creategroup ' + g, 400)
+  for (const g of ['young', 'grown', 'builders', 'young_sky', 'grown_sky', 'admin', 'moderator', 'owner']) await s.ask('lp creategroup ' + g, 400)
   await s.ask('lp group owner parent add admin', 400)
   for (const [g, ws] of Object.entries(ACCESS)) for (const w of ws) await s.ask(`lp group ${g} permission set multiverse.access.${w} true`, 300)
   for (const perm of ['multiverse.access.world', 'multiverse.teleport.self.w', 'multiverse.teleport.self.*']) await s.ask('lp group default permission set ' + perm + ' true', 300)
@@ -98,7 +98,7 @@ try {
   console.log('\n# The console interface for Leaf Juice')
   const prof = await s.sm('profiles')
   check('profiles lists what can be offered, with circles and confirmations', prof.status === 'ok' && prof.profiles.length === 5
-    && prof.profiles.find(p => p.id === 'grown_magic')?.confirm && prof.profiles.find(p => p.id === 'young')?.circle === 'young', JSON.stringify(prof).slice(0, 200))
+    && prof.profiles.find(p => p.id === 'grown_sky')?.confirm && prof.profiles.find(p => p.id === 'young')?.circle === 'young', JSON.stringify(prof).slice(0, 200))
   check('every request gets exactly one result line', prof.hits === 1)
   check('restricted groups are listed', same(prof.restricted, ['admin', 'owner', 'moderator']))
   const badReq = (await s.ask('stationmaster apply has!bad x y', 800)).join(' ')
@@ -117,12 +117,12 @@ try {
 
   // ---------- Approving with each single profile, with several and with none ----------
   console.log('\n# Approving: each profile alone, several, and none')
-  const cases = [['P_young', ['young']], ['P_grown', ['grown']], ['P_build', ['builders']], ['P_gmagic', ['grown_magic']],
-    ['P_several', ['young', 'builders', 'young_magic']], ['P_none', []]]
+  const cases = [['P_young', ['young']], ['P_grown', ['grown']], ['P_build', ['builders']], ['P_gsky', ['grown_sky']],
+    ['P_several', ['young', 'builders', 'young_sky']], ['P_none', []]]
   for (const [name, profiles] of cases) {
     const uuid = offlineUuid(name)
     from = s.log.length
-    const confirm = profiles.includes('grown_magic') ? ['confirm=confirm:grown_magic'] : []
+    const confirm = profiles.includes('grown_sky') ? ['confirm=confirm:grown_sky'] : []
     const r = await s.sm('apply', uuid, name, ...profiles.map(p => '+' + p), ...confirm, 'via=leaf-juice')
     check(`${name}: approved (${profiles.join('+') || 'no profile'})`, r.status === 'ok' && r.newlyWhitelisted === true, r.message)
     const b = await join(name)
@@ -132,7 +132,7 @@ try {
   }
   const doneLines = changesLog().filter(e => e.event === 'done' && e.via === 'leaf-juice')
   check('Leaf Juice changes are logged as console actions from Leaf Juice', doneLines.length === cases.length && doneLines.every(e => e.actor === 'Console' && e.time), String(doneLines.length))
-  check('a ProfilesChangedEvent fired for an approval, with who and what', spy(0, /SPY changed target=P_several .*actor=Console via=leaf-juice added=\[young, builders, young_magic\].*whitelisted=true main=true/).length === 1)
+  check('a ProfilesChangedEvent fired for an approval, with who and what', spy(0, /SPY changed target=P_several .*actor=Console via=leaf-juice added=\[young, builders, young_sky\].*whitelisted=true main=true/).length === 1)
   const replay = await s.smAs('t1-replay', 'apply', offlineUuid('P_replay'), 'P_replay', '+builders')
   const replay2 = await s.smAs('t1-replay', 'apply', offlineUuid('P_replay'), 'P_replay', '+builders')
   check('a repeated request ID is answered again but not applied twice', replay.status === 'ok' && replay2.replayed === true
@@ -319,9 +319,9 @@ try {
   await click(adminB, SLOT.CONFIRM); await sleep(1800)
   check('Yes, go ahead saves it', (await profilesOf('P_young')).includes('grown'))
   await s.sm('apply', offlineUuid('P_young'), 'P_young', '-grown', 'whitelist=no')
-  const adult = await s.sm('apply', offlineUuid('P_grown'), 'P_grown', '+grown_magic', 'whitelist=no')
-  check('the adult toggle asks for a yes', adult.status === 'warn' && adult.warnings[0].code === 'confirm:grown_magic')
-  const adultBridge = await s.sm('apply', offlineUuid('P_young'), 'P_young', '+grown_magic', 'confirm=confirm:grown_magic', 'whitelist=no')
+  const adult = await s.sm('apply', offlineUuid('P_grown'), 'P_grown', '+grown_sky', 'whitelist=no')
+  check('the adult toggle asks for a yes', adult.status === 'warn' && adult.warnings[0].code === 'confirm:grown_sky')
+  const adultBridge = await s.sm('apply', offlineUuid('P_young'), 'P_young', '+grown_sky', 'confirm=confirm:grown_sky', 'whitelist=no')
   check('a yes to the adult question doesn\'t cover the bridge', adultBridge.status === 'warn' && adultBridge.warnings.some(x => x.code === 'bridge'))
 
   // ---------- Two admins at once ----------
@@ -330,11 +330,11 @@ try {
   const wa = await openMenu(adminA, '/profile P_two edit'), wb = await openMenu(adminB, '/profile P_two edit')
   await click(adminA, SLOT.young)                       // A adds young
   await click(adminB, SLOT.builders)                    // B removes builders
-  await click(adminB, SLOT.young_magic)                 // and adds young magic
+  await click(adminB, SLOT.young_sky)                 // and adds young sky
   from = s.log.length
   rawClick(adminA, SLOT.CONFIRM, 0, 0); rawClick(adminB, SLOT.CONFIRM, 0, 0)
   await sleep(3000)
-  check('both changes land: young and young magic added, builders removed', same(await profilesOf('P_two'), ['young', 'young_magic']), (await profilesOf('P_two')).join(','))
+  check('both changes land: young and young sky added, builders removed', same(await profilesOf('P_two'), ['young', 'young_sky']), (await profilesOf('P_two')).join(','))
   const two = changesLog().filter(e => e.target === 'P_two' && e.event === 'done' && e.via === 'menu')
   check('both are logged, one each', two.length === 2 && new Set(two.map(e => e.actor)).size === 2)
   check('and both events fired', spy(from, /SPY changed target=P_two /).length === 2)
@@ -376,10 +376,10 @@ try {
   bots.length = 0
   await s.stop(); await sleep(1500)
   s = new Server(dir); await s.start()
-  check('profiles survive a restart', same(await profilesOf('P_two'), ['young', 'young_magic', 'builders']) && same(await profilesOf('P_several'), ['young', 'builders', 'young_magic']))
+  check('profiles survive a restart', same(await profilesOf('P_two'), ['young', 'young_sky', 'builders']) && same(await profilesOf('P_several'), ['young', 'builders', 'young_sky']))
   check('the attempts list survives a restart', (await s.sm('attempts')).attempts.some(a => a.name === 'Stranger2'))
   const after2 = await join('P_several')
-  check('and the worlds are still right after it', same(await openWorlds(after2), expected(['young', 'builders', 'young_magic'])))
+  check('and the worlds are still right after it', same(await openWorlds(after2), expected(['young', 'builders', 'young_sky'])))
   await quit(after2)
 
   // ---------- Broken config ----------

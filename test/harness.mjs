@@ -109,7 +109,11 @@ export class Server {
     while (Date.now() < end) {
       const hit = this.log.slice(from).find(l => re.test(l))
       if (hit) return hit
-      if (this.proc.exitCode !== null) throw new Error('Server exited while waiting for ' + re)
+      if (this.proc.exitCode !== null) {
+        const last = this.log.slice(-5).map(strip).join('\n    ')
+        throw new Error(`Server exited (code ${this.proc.exitCode}) while waiting for ${re}. Its last lines:\n    ${last}\n` +
+          '  Paper 26 needs Java 25. Set STATIONMASTER_TEST_JAVA if `java` is older.')
+      }
       await sleep(50)
     }
     throw new Error('Timed out waiting for ' + re)

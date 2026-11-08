@@ -22,8 +22,9 @@ jobs:
           want="${GITHUB_REF_NAME#v}"
           have="$(./gradlew -q properties | sed -n 's/^version: //p')"
           [ "$want" = "$have" ] || { echo "Tag $GITHUB_REF_NAME doesn't match version $have in build.gradle.kts"; exit 1; }
+          head -1 RELEASE_NOTES.md | grep -qx "# Stationmaster $want" || { echo "RELEASE_NOTES.md is for another version. Its first line must be: # Stationmaster $want"; exit 1; }
       - run: ./gradlew build
       - name: Attach the jar to a GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" build/libs/Stationmaster-*.jar --title "Stationmaster $GITHUB_REF_NAME" --notes "See the README for what was tested." --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" build/libs/Stationmaster-*.jar --title "Stationmaster $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md --verify-tag

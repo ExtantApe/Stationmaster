@@ -17,10 +17,10 @@ class SettingsTest {
     void theShippedConfigLoadsCleanly() throws Exception {
         Settings s = Settings.parse(defaults());
         assertTrue(s.ok(), String.valueOf(s.problems()));
-        assertEquals(java.util.List.of("young", "grown", "builders", "young_magic", "grown_magic"), s.profiles().keySet().stream().toList());
+        assertEquals(java.util.List.of("young", "grown", "builders", "young_sky", "grown_sky"), s.profiles().keySet().stream().toList());
         assertTrue(s.problems().isEmpty(), String.valueOf(s.problems()));
-        assertNotNull(s.profiles().get("grown_magic").confirm());
-        assertTrue(s.profiles().get("young_magic").toggle());
+        assertNotNull(s.profiles().get("grown_sky").confirm());
+        assertTrue(s.profiles().get("young_sky").toggle());
     }
 
     @Test
@@ -77,12 +77,12 @@ class SettingsTest {
         Profile p = Settings.parse("""
                 restricted-groups: []
                 profiles:
-                  a: {group: a, worlds: ["explore*", build, "*_magic"]}
+                  a: {group: a, worlds: ["explore*", build, "*_sky"]}
                 """).profiles().get("a");
         assertTrue(p.opens("explore"));
         assertTrue(p.opens("explore_nether"));
         assertTrue(p.opens("Build"));
-        assertTrue(p.opens("big_magic"));
+        assertTrue(p.opens("big_sky"));
         assertFalse(p.opens("builder"));
         assertFalse(p.opens("lobby"));
     }
