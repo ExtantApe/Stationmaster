@@ -5,12 +5,11 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import io.papermc.paper.command.brigadier.BasicCommand;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,35 +18,48 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-/** /approve &lt;name&gt; and /profile &lt;name&gt; [edit], for admins in the game. */
-final class PlayerCommands implements CommandExecutor, TabCompleter {
+/**
+ * /approve &lt;name&gt; and /profile &lt;name&gt; [edit], for admins in the game. Both need stationmaster.approve, so
+ * players without it don't see them at all.
+ */
+final class PlayerCommands {
 
     private final StationmasterPlugin plugin;
 
     PlayerCommands(StationmasterPlugin plugin) { this.plugin = plugin; }
 
+    /** One of the two commands, as Paper's BasicCommand. */
+    final class Command implements BasicCommand {
+        private final boolean approve;
+        Command(boolean approve) { this.approve = approve; }
+        @Override public void execute(CommandSourceStack source, String[] args) { run(source.getSender(), approve, args); }
+        @Override public java.util.Collection<String> suggest(CommandSourceStack source, String[] args) { return complete(source.getSender(), approve, args); }
+        @Override public @Nullable String permission() { return ChangeService.PERMISSION; }
+    }
+
+    BasicCommand approve() { return new Command(true); }
+    BasicCommand profile() { return new Command(false); }
+
     static Component bad(String text) { return Component.text(text, NamedTextColor.RED); }
     static Component good(String text) { return Component.text(text, NamedTextColor.GREEN); }
     static Component plain(String text) { return Component.text(text, NamedTextColor.GRAY); }
 
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String @NotNull [] args) {
+    private void run(CommandSender sender, boolean approve, String[] args) {
         if (!sender.hasPermission(ChangeService.PERMISSION)) {
             sender.sendMessage(bad("Only approvers can do that."));
-            return true;
+            return;
         }
-        boolean approve = command.getName().equals("approve");
         if (args.length < 1 || args.length > 2 || (approve && args.length != 1) || (args.length == 2 && !args[1].equalsIgnoreCase("edit"))) {
             sender.sendMessage(plain(approve ? "Use /approve <name> to let someone in and choose their profiles." : "Use /profile <name> to see someone's profiles, or /profile <name> edit to change them."));
-            return true;
+            return;
         }
         boolean edit = approve || args.length == 2;
         if (edit && !(sender instanceof Player)) {
             sender.sendMessage(plain("The menu is for players. From the console, use: stationmaster apply <request-id> <uuid> <name> +profile -profile"));
-            return true;
+            return;
         }
-        if (!plugin.settings().ok()) { sender.sendMessage(bad("Stationmaster's config is broken, so it can't change anything right now. " + plugin.settings().problems().get(0))); return true; }
-        if (!plugin.store().ready()) { sender.sendMessage(bad("LuckPerms isn't running, so Stationmaster can't change anyone's profiles right now.")); return true; }
+        if (!plugin.settings().ok()) { sender.sendMessage(bad("Stationmaster's config is broken, so it can't change anything right now. " + plugin.settings().problems().get(0))); return; }
+        if (!plugin.store().ready()) { sender.sendMessage(bad("LuckPerms isn't running, so Stationmaster can't change anyone's profiles right now.")); return; }
 
         sender.sendMessage(plain("Looking up " + args[0] + "…"));
         resolve(sender, args[0], who -> {
@@ -67,7 +79,7 @@ final class PlayerCommands implements CommandExecutor, TabCompleter {
                 }
             }));
         });
-        return true;
+        return;
     }
 
     private void resolve(CommandSender sender, String typed, Consumer<NameResolver.Resolved> then) {
@@ -100,14 +112,13 @@ final class PlayerCommands implements CommandExecutor, TabCompleter {
         }
     }
 
-    @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String @NotNull [] args) {
+    private List<String> complete(CommandSender sender, boolean approve, String[] args) {
         if (!sender.hasPermission(ChangeService.PERMISSION)) return List.of();
-        if (args.length == 1) {
-            String start = args[0].toLowerCase(Locale.ROOT);
+        if (args.length <= 1) {
+            String start = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).filter(n -> n.toLowerCase(Locale.ROOT).startsWith(start)).toList();
         }
-        if (args.length == 2 && command.getName().equals("profile")) return List.of("edit");
+        if (args.length == 2 && !approve) return List.of("edit");
         return List.of();
     }
 }

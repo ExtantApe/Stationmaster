@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 import net.luckperms.api.LuckPerms;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.PluginCommand;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.IOException;
@@ -51,7 +51,7 @@ public final class StationmasterPlugin extends JavaPlugin {
         access = new WorldAccess(this);
         changes = new ChangeService(this);
         Executor async = r -> Bukkit.getScheduler().runTaskAsynchronously(this, r);
-        names = new NameResolver(async);
+        names = new NameResolver(async, attempts::byName);
         menus = new PickerMenus(this);
 
         getServer().getPluginManager().registerEvents(attempts, this);
@@ -59,9 +59,13 @@ public final class StationmasterPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(menus, this);
 
         PlayerCommands players = new PlayerCommands(this);
-        bind("approve", players);
-        bind("profile", players);
-        bind("stationmaster", new ConsoleCommands(this));
+        ConsoleCommands console = new ConsoleCommands(this);
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            var commands = event.registrar();
+            commands.register("approve", "Let someone in and choose their profiles.", players.approve());
+            commands.register("profile", "See or change someone's profiles.", players.profile());
+            commands.register("stationmaster", "Console commands for Leaf Juice and scripts, and reload.", List.of("smaster"), console);
+        });
 
         // After startup, so listeners from other plugins hear about problems.
         Bukkit.getScheduler().runTask(this, () -> {
@@ -77,13 +81,6 @@ public final class StationmasterPlugin extends JavaPlugin {
     public void onDisable() {
         if (menus != null) menus.closeAll();
         if (changes != null) changes.shutdown();
-    }
-
-    private void bind(String name, Object handler) {
-        PluginCommand command = getCommand(name);
-        if (command == null) return;
-        command.setExecutor((org.bukkit.command.CommandExecutor) handler);
-        command.setTabCompleter((org.bukkit.command.TabCompleter) handler);
     }
 
     private GroupStore connectLuckPerms() {
@@ -141,7 +138,8 @@ public final class StationmasterPlugin extends JavaPlugin {
         for (Profile p : settings.profiles().values()) {
             String why = Planner.unsafe(settings, store, p);
             if (why == null) { keep.put(p.id(), p); continue; }
-            String line = "Profile " + p.id() + " is left out: " + why.replace(" Nothing was changed.", "").replace(", so nothing was changed.", ".");
+            String line = "Profile " + p.id() + " is left out: " + why.replace(" Nothing was changed.", "").replace(", so nothing was changed.", ".")
+                    + (why.contains("doesn't exist") ? " Create the group, then run stationmaster reload." : "");
             problems.add(line);
             getLogger().warning(line);
             callProblem(why.contains("doesn't exist") ? "config_problem" : "restricted", line);

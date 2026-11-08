@@ -62,6 +62,13 @@ public final class JoinAttempts implements Listener {
 
     public synchronized List<Attempt> list() { return new ArrayList<>(attempts.values()); }
 
+    /** The newest attempt under this name, ignoring capitals, or null. */
+    public synchronized NameResolver.Resolved byName(String name) {
+        NameResolver.Resolved found = null;
+        for (Attempt a : attempts.values()) if (a.name.equalsIgnoreCase(name)) found = new NameResolver.Resolved(UUID.fromString(a.uuid), a.name);
+        return found;
+    }
+
     public synchronized void remove(UUID id) {
         if (attempts.remove(id) != null) save();
     }

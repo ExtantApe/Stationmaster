@@ -1,0 +1,11 @@
+name: StationmasterSpy
+version: '1'
+main: com.extantape.stationmaster.spy.SpyPlugin
+api-version: '26.1'
+description: Test only. Logs Stationmaster's events to the console.
+dependencies:
+  server:
+    Stationmaster:
+      load: BEFORE
+      required: true
+      join-classpath: true

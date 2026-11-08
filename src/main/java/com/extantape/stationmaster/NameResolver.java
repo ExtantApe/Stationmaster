@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 
 /**
  * Turns a typed name into an account, in any capitalization, even if they've never joined. Players the server already
- * knows are found locally. Otherwise, in Mojang mode it asks Mojang's public profile lookup, which tells a missing
+ * knows, and people the whitelist recently turned away, are found locally. Otherwise, in Mojang mode it asks Mojang's public profile lookup, which tells a missing
  * account (404) apart from one it couldn't reach.
  */
 public final class NameResolver {
@@ -36,8 +36,13 @@ public final class NameResolver {
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     private final Executor async;
+    private final java.util.function.Function<String, Resolved> recentAttempt;
 
-    public NameResolver(Executor async) { this.async = async; }
+    /** recentAttempt finds someone who tried to join under that name, in any capitalization, or returns null. */
+    public NameResolver(Executor async, java.util.function.Function<String, Resolved> recentAttempt) {
+        this.async = async;
+        this.recentAttempt = recentAttempt;
+    }
 
     public static boolean possibleName(String name) { return name != null && VALID.matcher(name).matches(); }
 
@@ -48,6 +53,9 @@ public final class NameResolver {
             OfflinePlayer known = Bukkit.getOfflinePlayerIfCached(typed);
             if (known != null && known.getName() != null && (known.hasPlayedBefore() || known.isOnline() || known.isWhitelisted()))
                 return new Resolved(known.getUniqueId(), known.getName());
+            // Someone the whitelist turned away: the server saw their real account when they tried.
+            Resolved tried = recentAttempt.apply(typed);
+            if (tried != null) return tried;
             boolean mojang = lookup == Settings.Lookup.MOJANG || (lookup == Settings.Lookup.AUTO && Bukkit.getOnlineMode());
             return mojang ? askMojang(typed) : offline(typed);
         }, async);

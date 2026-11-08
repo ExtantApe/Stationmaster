@@ -139,8 +139,10 @@ public final class ChangeService {
         pause("stationmaster.test.pause-after-groups");
 
         List<String> added = ids(settings, plan.addGroups()), removed = ids(settings, plan.removeGroups());
+        // Found by name, so the whitelist entry carries the name and not just the UUID. Only used if it's the same account.
+        OfflinePlayer byName = whitelistNow ? Bukkit.getOfflinePlayer(r.targetName()) : null;
         Boolean whitelisted = callMain(() -> {
-            OfflinePlayer target = Bukkit.getOfflinePlayer(r.target());
+            OfflinePlayer target = byName != null && r.target().equals(byName.getUniqueId()) ? byName : Bukkit.getOfflinePlayer(r.target());
             if (whitelistNow) target.setWhitelisted(true);
             plugin.attempts().remove(r.target());
             Player online = target.getPlayer();

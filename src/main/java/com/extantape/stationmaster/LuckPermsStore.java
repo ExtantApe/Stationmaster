@@ -31,7 +31,7 @@ final class LuckPermsStore implements GroupStore {
     public CompletableFuture<UserState> modify(UUID id, String name, Set<String> add, Set<String> remove) {
         var users = lp.getUserManager();
         return users.savePlayerData(id, name)
-                .thenCompose(r -> users.loadUser(id, name))
+                .thenCompose(_ -> users.loadUser(id, name))
                 .thenCompose(user -> {
                     for (InheritanceNode n : user.getNodes(NodeType.INHERITANCE)) {
                         if (n.getContexts().isEmpty() && remove.contains(n.getGroupName().toLowerCase(Locale.ROOT))) user.data().remove(n);
@@ -43,7 +43,7 @@ final class LuckPermsStore implements GroupStore {
                     if (error == null) return CompletableFuture.completedFuture(state);
                     // Put the in-memory user back to what storage holds, so nothing is half applied.
                     CompletableFuture<UserState> failed = new CompletableFuture<>();
-                    users.loadUser(id).whenComplete((u, e2) -> failed.completeExceptionally(error));
+                    users.loadUser(id).whenComplete((_, _) -> failed.completeExceptionally(error));
                     return failed;
                 })
                 .thenCompose(f -> f);

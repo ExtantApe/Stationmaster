@@ -4,13 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import io.papermc.paper.command.brigadier.BasicCommand;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.RemoteConsoleCommandSender;
-import org.bukkit.command.TabCompleter;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,7 +23,7 @@ import java.util.regex.Pattern;
  * /stationmaster: console commands for Leaf Juice and scripts. Each takes a request ID and answers with exactly one
  * line, {@code stationmaster-result <request-id> <json>}, which may come a moment later. See README for the fields.
  */
-final class ConsoleCommands implements CommandExecutor, TabCompleter {
+final class ConsoleCommands implements BasicCommand {
 
     static final String PREFIX = "stationmaster-result ";
     private static final Pattern REQUEST = Pattern.compile("[A-Za-z0-9._:-]{1,64}");
@@ -37,27 +35,34 @@ final class ConsoleCommands implements CommandExecutor, TabCompleter {
 
     ConsoleCommands(StationmasterPlugin plugin) { this.plugin = plugin; }
 
+    /** The console, and approvers in the game (who only get reload). Hidden from everyone else. */
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String @NotNull [] args) {
-        boolean console = sender instanceof ConsoleCommandSender || sender instanceof RemoteConsoleCommandSender;
+    public boolean canUse(CommandSender sender) { return isConsole(sender) || sender.hasPermission(ChangeService.PERMISSION); }
+
+    static boolean isConsole(CommandSender sender) { return sender instanceof ConsoleCommandSender || sender instanceof RemoteConsoleCommandSender; }
+
+    @Override
+    public void execute(CommandSourceStack source, String[] args) {
+        CommandSender sender = source.getSender();
+        boolean console = isConsole(sender);
         if (args.length == 0) {
             sender.sendMessage("Stationmaster " + plugin.getPluginMeta().getVersion() + ": " + String.join(", ", SUBS) + ". See the README for details.");
-            return true;
+            return;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals("reload")) {
-            if (!console && !sender.hasPermission(ChangeService.PERMISSION)) { sender.sendMessage(PlayerCommands.bad("Only approvers can do that.")); return true; }
+            if (!console && !sender.hasPermission(ChangeService.PERMISSION)) { sender.sendMessage(PlayerCommands.bad("Only approvers can do that.")); return; }
             for (String line : plugin.reload()) sender.sendMessage(line);
-            return true;
+            return;
         }
         if (!console) {
             sender.sendMessage(PlayerCommands.bad("Those are console commands. In the game, use /approve <name> or /profile <name>."));
-            return true;
+            return;
         }
-        if (!SUBS.contains(sub)) { sender.sendMessage("Unknown: " + sub + ". Try " + String.join(", ", SUBS) + "."); return true; }
+        if (!SUBS.contains(sub)) { sender.sendMessage("Unknown: " + sub + ". Try " + String.join(", ", SUBS) + "."); return; }
         if (args.length < 2 || !REQUEST.matcher(args[1]).matches()) {
             reply(sender, "-", error("bad_request", "Give a request ID first: 1 to 64 letters, digits, '.', '_', ':' or '-'."));
-            return true;
+            return;
         }
         String req = args[1];
         String[] rest = java.util.Arrays.copyOfRange(args, 2, args.length);
@@ -70,7 +75,6 @@ final class ConsoleCommands implements CommandExecutor, TabCompleter {
             case "log" -> log(sender, req, rest);
             default -> { }
         }
-        return true;
     }
 
     private void reply(CommandSender sender, String req, JsonObject json) {
@@ -239,9 +243,9 @@ final class ConsoleCommands implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String @NotNull [] args) {
-        boolean console = sender instanceof ConsoleCommandSender || sender instanceof RemoteConsoleCommandSender;
-        if (args.length == 1) return (console ? SUBS : List.of("reload")).stream().filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT))).toList();
-        return List.of();
+    public java.util.Collection<String> suggest(CommandSourceStack source, String[] args) {
+        if (args.length > 1) return List.of();
+        String start = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
+        return (isConsole(source.getSender()) ? SUBS : List.of("reload")).stream().filter(s -> s.startsWith(start)).toList();
     }
 }

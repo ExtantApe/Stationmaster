@@ -1,0 +1,17 @@
+name: Stationmaster
+version: '${version}'
+main: com.extantape.stationmaster.StationmasterPlugin
+api-version: '26.1'
+description: Approve new players and choose their profiles, without typing LuckPerms commands.
+website: https://github.com/ExtantApe/Stationmaster
+dependencies:
+  server:
+    # Optional on purpose: without LuckPerms, Stationmaster still loads and refuses every change, saying why.
+    LuckPerms:
+      load: BEFORE
+      required: false
+      join-classpath: true
+permissions:
+  stationmaster.approve:
+    description: Approve people and change their profiles, by command or menu. Nobody can use it on themselves.
+    default: false

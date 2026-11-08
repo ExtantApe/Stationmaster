@@ -1,5 +1,8 @@
 package com.extantape.stationmaster;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.ItemLore;
+import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -18,8 +21,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -146,9 +147,7 @@ final class PickerMenus implements Listener {
         lore.add(Component.text(status, color).decoration(TextDecoration.ITALIC, false));
         if (p.confirm() != null && !on) lore.add(Component.text("Asks for a yes before it's added", NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
         ItemStack it = item(icon, Component.text(p.label(), on ? NamedTextColor.GREEN : NamedTextColor.WHITE).decoration(TextDecoration.BOLD, on), lore);
-        ItemMeta meta = it.getItemMeta();
-        meta.setEnchantmentGlintOverride(on);
-        it.setItemMeta(meta);
+        it.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, on);
         return it;
     }
 
@@ -175,20 +174,16 @@ final class PickerMenus implements Listener {
     }
 
     private ItemStack head(Menu m) {
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-        meta.setPlayerProfile(Bukkit.createProfile(m.target.id(), m.target.name()));
-        meta.displayName(Component.text(m.target.name(), NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false));
-        head.setItemMeta(meta);
+        ItemStack head = item(Material.PLAYER_HEAD, Component.text(m.target.name(), NamedTextColor.GOLD), List.of());
+        head.setData(DataComponentTypes.PROFILE, ResolvableProfile.resolvableProfile(Bukkit.createProfile(m.target.id(), m.target.name())));
         return head;
     }
 
+    /** A menu item, built from data components. ITEM_NAME is never italic, unlike a custom name. */
     private static ItemStack item(Material material, Component name, List<Component> lore) {
-        ItemStack it = new ItemStack(material);
-        ItemMeta meta = it.getItemMeta();
-        meta.displayName(name.decoration(TextDecoration.ITALIC, false));
-        meta.lore(lore);
-        it.setItemMeta(meta);
+        ItemStack it = ItemStack.of(material);
+        it.setData(DataComponentTypes.ITEM_NAME, name);
+        if (!lore.isEmpty()) it.setData(DataComponentTypes.LORE, ItemLore.lore(lore));
         return it;
     }
 
