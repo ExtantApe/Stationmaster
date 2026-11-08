@@ -1,0 +1,74 @@
+# Stationmaster settings. The profiles below are examples: replace them with your own groups and worlds.
+# After editing, run "stationmaster reload" in the console or /stationmaster reload in the game.
+
+# Where people are sent when a world closes to them. Blank means the server's main world.
+lobby-world: ""
+
+# How a typed name becomes an account.
+#   auto:    ask Mojang when the server is in online mode, otherwise use the offline-mode account.
+#   mojang:  always ask Mojang. Use this behind a proxy that checks accounts.
+#   offline: never ask Mojang. Only right for offline-mode servers, where capitals in a name matter.
+name-lookup: auto
+
+# Groups Stationmaster never adds or removes, whatever the profiles say. Change these from the console.
+# A profile whose group is listed here, or inherits one listed here, is refused. So is any profile whose
+# group grants every permission ("*"), stationmaster.approve or LuckPerms editing.
+restricted-groups: [admin, owner, moderator]
+
+# Each profile adds the person to one LuckPerms group, which should grant that profile's worlds
+# (for example multiverse.access.<world>). Approving someone with no profile leaves them with
+# whatever LuckPerms' default group allows.
+#
+#   label:       what admins see.
+#   group:       the LuckPerms group. It must already exist.
+#   icon:        an item name for the menu, such as OAK_SAPLING.
+#   toggle:      true shows it in the lower "extras" rows instead of the main profiles.
+#   worlds:      worlds this profile opens. When it's removed, anyone standing in one of these worlds
+#                who has no other profile listing it is sent to the lobby. * matches anything, so
+#                "explore*" covers explore, explore_nether and explore_the_end.
+#   circle:      the chat circle this profile joins. Adding a profile that would put someone in two
+#                circles at once asks for a yes first, since they'd link those chats.
+#   confirm:     a question that must be answered yes before this profile is added.
+#   granted:     what the player sees when it's added, if they're online.
+#   description: a line or two for the menu.
+profiles:
+  young:
+    label: "Young explorers"
+    group: young
+    icon: OAK_SAPLING
+    worlds: ["young_explore*", young_build]
+    circle: young
+    granted: "You're cleared for the young explorers' worlds!"
+    description: "The young explorers' survival and build worlds."
+  grown:
+    label: "Grown-ups"
+    group: grown
+    icon: COMPASS
+    worlds: ["grown_explore*", grown_build]
+    circle: grown
+    granted: "You're cleared for the grown-ups' worlds!"
+    description: "The grown-ups' survival and build worlds."
+  builders:
+    label: "Builders"
+    group: builders
+    icon: BRICKS
+    worlds: [creative]
+    granted: "You're cleared for the creative world!"
+    description: "The creative world."
+  young_magic:
+    label: "Magic for young explorers"
+    group: young_magic
+    icon: BLAZE_ROD
+    toggle: true
+    worlds: [young_magic]
+    circle: young
+    description: "The young explorers' magic world."
+  grown_magic:
+    label: "Magic for grown-ups"
+    group: grown_magic
+    icon: END_ROD
+    toggle: true
+    worlds: [grown_magic]
+    circle: grown
+    confirm: "This magic world is meant for adults. Turn it on?"
+    description: "The grown-ups' magic world."
