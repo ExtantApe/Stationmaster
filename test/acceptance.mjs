@@ -1,6 +1,6 @@
 // Acceptance tests: bots on a fresh throwaway server, 127.0.0.1 only, with made-up worlds and groups.
 // Every "blocked" result has a positive control next to it, so a test can't pass just because nothing works.
-import { chmodSync, existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { freshServer, writeConfig, Server, bot, sleep, check, summary, PAPER, results } from './harness.mjs'
@@ -450,6 +450,8 @@ try {
 } finally {
   for (const b of bots) try { b.quit() } catch {}
   try { if (s.proc?.exitCode === null) await s.stop() } catch {}
+  // One throwaway server at a time, and none left behind: delete it as soon as the run ends.
+  if (process.env.STATIONMASTER_TEST_KEEP !== '1') rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 })
 }
 summary()
 console.log(`(${results.length} checks on Paper ${PAPER})`)

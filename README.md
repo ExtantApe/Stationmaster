@@ -129,7 +129,7 @@ Each change writes a `started` line to `changes.log` before LuckPerms is touched
 
 `./gradlew build` runs the unit tests: config parsing, the safety rules, the warnings and the change log's crash handling.
 
-The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.1 port 25615. Each has LuckPerms, Multiverse-Core, Multiverse-Inventories, made-up worlds and groups, and mineflayer bots as players. Every result that says "blocked" has a check beside it showing the same thing works when it should. See the top of `test/harness.mjs` for setup, then run `node test/acceptance.mjs`.
+The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.1 port 25615. Each has LuckPerms, Multiverse-Core, Multiverse-Inventories, made-up worlds and groups, and mineflayer bots as players. Every result that says "blocked" has a check beside it showing the same thing works when it should. See the top of `test/harness.mjs` for setup, then run `node test/acceptance.mjs`. It runs one server at a time and deletes it when the run ends. Set `STATIONMASTER_TEST_KEEP=1` to keep it for a look.
 
 **Passed on Paper 26.1.2, 26.2 and 26.3 (2026-11-07), 98 checks each:**
 
