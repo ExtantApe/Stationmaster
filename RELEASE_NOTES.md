@@ -1,16 +1,22 @@
-# Usher 0.3.0
+# Usher 0.3.1
 
-Stationmaster is now called Usher. This release renames it and changes nothing else in how it works. The owner chose the name on 2026-11-08.
+Usher now works with Latchkey 0.2.0's invites. Nothing else changes, and Usher still runs the same without Latchkey.
 
 This is an early 0.x release. It has passed bot tests on throwaway servers, but it hasn't been used on a real server or seen in a real game client.
 
-## Upgrading from Stationmaster 0.2.1
+## New: profiles on Latchkey invites
 
-- Swap `Stationmaster-0.2.1.jar` for `Usher-0.3.0.jar` with the server stopped.
-- On first start, `plugins/Stationmaster/` is copied to `plugins/Usher/` if that doesn't exist yet, so your config, change log and join attempts come across. The old folder is left untouched as a backup. Nothing is ever overwritten.
-- **Deprecated, removed in the next release:** the permission `stationmaster.approve` and the console command `stationmaster` (and `smaster`). They still work in 0.3.x and log a line each time saying what to use instead. Grant `usher.approve` and use `usher`.
-- Changed outright: the console result line is `usher-result <request-id> <json>`, the plugin and jar are `Usher`, and the API package is `com.extantape.usher.api` (`UsherProblemEvent`, `ProfilesChangedEvent`, `JoinAttemptEvent`). Nothing published used the old ones.
+- **When an admin makes an invite that names profiles,** Usher checks them straight away with its usual rules. Unknown or restricted profiles are refused, so a bad invite is never made. Anything that needs a yes, such as joining two chat circles or a profile with a `confirm` question, comes back as a question. The admin answers it with `--yes` on the same command.
+- **When the invite is used,** Usher applies the profiles through the same path as any approval, with the yeses given when the invite was made. The change log records it as "Latchkey invite". If something has changed since, nothing is applied and the server log says why.
+- **An invite with no profiles** gives lobby-only access until an admin adds more.
+- Usher doesn't need Latchkey to build or run. It finds Latchkey's events by name when Latchkey is installed.
+
+## Upgrading from 0.3.0
+
+Swap the jar with the server stopped. Nothing else changes. The old names from Stationmaster (`stationmaster.approve`, the `stationmaster` and `smaster` commands) still work in 0.3.x, as promised, and go in the next release.
 
 ## Tested
 
-The full bot suite on a throwaway Paper 26.1.2 server, plus new checks for the rename: the old permission and command still work and log a warning, and a server with only `plugins/Stationmaster/` starts with its config and change log copied byte for byte, the old folder untouched, and no second copy on the next start. Unit tests cover the copy, including a half-finished copy left by a crash.
+- 43 unit tests pass, including 9 new ones for the invite checks.
+- Latchkey's bot test runs this code with Latchkey 0.2.0 on throwaway Paper 26.1.2, 26.2 and 26.3 servers, and passes 38/38 on each. It covers a refused profile, a question answered with `--yes`, and both profiles applied when the invite is used.
+- Not tested yet: a real server or client.
