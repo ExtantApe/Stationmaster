@@ -15,8 +15,8 @@ const ACCESS = { young: ['young_explore'], grown: ['grown_explore'], builders: [
 const bots = []
 const join = async name => { const b = await bot(name); bots.push(b); return b }
 const quit = async b => { if (!b) return; b.quit(); await sleep(800) }
-const changesLog = () => existsSync(path.join(dir, 'plugins/Stationmaster/changes.log'))
-  ? readFileSync(path.join(dir, 'plugins/Stationmaster/changes.log'), 'utf8').trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l) } catch { return { unreadable: l } } }) : []
+const changesLog = () => existsSync(path.join(dir, 'plugins/Usher/changes.log'))
+  ? readFileSync(path.join(dir, 'plugins/Usher/changes.log'), 'utf8').trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l) } catch { return { unreadable: l } } }) : []
 const spy = (from, re) => s.log.slice(from).filter(l => /SPY /.test(l) && re.test(l))
 const whitelist = () => JSON.parse(readFileSync(path.join(dir, 'whitelist.json'), 'utf8'))
 const offlineUuid = name => {
@@ -91,11 +91,11 @@ try {
   for (const [g, ws] of Object.entries(ACCESS)) for (const w of ws) await s.ask(`lp group ${g} permission set multiverse.access.${w} true`, 300)
   for (const perm of ['multiverse.access.world', 'multiverse.teleport.self.w', 'multiverse.teleport.self.*']) await s.ask('lp group default permission set ' + perm + ' true', 300)
   for (const a of ['AdminA', 'AdminB', 'Pleb']) await s.ask('whitelist add ' + a, 300)
-  const reload = (await s.ask('stationmaster reload', 1200)).join(' ')
+  const reload = (await s.ask('usher reload', 1200)).join(' ')
   check('setup: all five example profiles load once their groups exist', /Reloaded: 5 profiles/.test(reload), reload.slice(0, 200))
 
   const adminA = await join('AdminA'), adminB = await join('AdminB'), pleb = await join('Pleb')
-  for (const a of ['AdminA', 'AdminB']) await s.ask(`lp user ${a} permission set stationmaster.approve true`, 500)
+  for (const a of ['AdminA', 'AdminB']) await s.ask(`lp user ${a} permission set usher.approve true`, 500)
   await sleep(1000)
 
   // ---------- Console interface ----------
@@ -105,8 +105,8 @@ try {
     && prof.profiles.find(p => p.id === 'grown_sky')?.confirm && prof.profiles.find(p => p.id === 'young')?.circle === 'young', JSON.stringify(prof).slice(0, 200))
   check('every request gets exactly one result line', prof.hits === 1)
   check('restricted groups are listed', same(prof.restricted, ['admin', 'owner', 'moderator']))
-  const badReq = (await s.ask('stationmaster apply has!bad x y', 800)).join(' ')
-  check('a bad request ID is answered with an error line, not silence', /stationmaster-result - .*bad_request/.test(badReq))
+  const badReq = (await s.ask('usher apply has!bad x y', 800)).join(' ')
+  check('a bad request ID is answered with an error line, not silence', /usher-result - .*bad_request/.test(badReq))
 
   // ---------- Strangers ----------
   console.log('\n# Strangers stay out, and are remembered')
@@ -173,7 +173,7 @@ try {
   let opened = false
   const onOpen = () => { opened = true }
   pleb.on('windowOpen', onOpen)
-  for (const c of ['/approve Someone', '/profile P_build', '/profile P_build edit', '/stationmaster apply x 00000000-0000-0000-0000-000000000000 Someone +young', '/stationmaster reload', '/smaster profiles x']) {
+  for (const c of ['/approve Someone', '/profile P_build', '/profile P_build edit', '/usher apply x 00000000-0000-0000-0000-000000000000 Someone +young', '/usher reload', '/smaster profiles x']) {
     pleb.chat(c); await sleep(700)
   }
   pleb.removeListener('windowOpen', onOpen)
@@ -264,10 +264,10 @@ try {
 
   // ---------- Restricted groups ----------
   console.log('\n# Restricted groups')
-  const cfg = path.join(dir, 'plugins/Stationmaster/config.yml')
+  const cfg = path.join(dir, 'plugins/Usher/config.yml')
   const goodCfg = readFileSync(cfg, 'utf8')
   await s.ask('lp creategroup helpers', 400); await s.ask('lp group helpers parent add moderator', 400)
-  await s.ask('lp creategroup approvers', 400); await s.ask('lp group approvers permission set stationmaster.approve true', 400)
+  await s.ask('lp creategroup approvers', 400); await s.ask('lp group approvers permission set usher.approve true', 400)
   await s.ask('lp creategroup everything', 400); await s.ask('lp group everything permission set * true', 400)
   writeFileSync(cfg, goodCfg + `
   sneaky1: {label: "Sneaky one", group: Moderator}
@@ -277,7 +277,7 @@ try {
   sneaky5: {label: "Sneaky five", group: owner}
 `)
   from = s.log.length
-  const rl = (await s.ask('stationmaster reload', 1500)).join(' ')
+  const rl = (await s.ask('usher reload', 1500)).join(' ')
   const prof2 = await s.sm('profiles')
   check('config tricks are refused: restricted name in other capitals, inheriting one, granting approve, granting *, a child of admin',
     prof2.profiles.length === 5 && ['sneaky1', 'sneaky2', 'sneaky3', 'sneaky4', 'sneaky5'].every(id => prof2.problems.some(p => p.includes(id))), prof2.problems.join(' | ').slice(0, 300))
@@ -301,7 +301,7 @@ try {
     && adminA.chat_log.some(m => /inherits the restricted group admin/.test(m)), adminA.chat_log.slice(-1)[0])
   await s.ask('lp group grown parent remove admin', 600)
   writeFileSync(cfg, goodCfg)
-  await s.ask('stationmaster reload', 1500)
+  await s.ask('usher reload', 1500)
 
   // ---------- Bridging the chat circles ----------
   console.log('\n# Bridging the chat circles')
@@ -389,7 +389,7 @@ try {
   // ---------- Broken config ----------
   console.log('\n# Broken config')
   writeFileSync(cfg, goodCfg.replace('profiles:', 'profiles: [oops'))
-  const brk = (await s.ask('stationmaster reload', 1500)).join(' ')
+  const brk = (await s.ask('usher reload', 1500)).join(' ')
   check('reloading a broken config says so and keeps the old settings', /Couldn't reload/.test(brk) && /Still using the settings from before/.test(brk) && (await s.sm('profiles')).profiles.length === 5)
   await s.stop(); await sleep(1000)
   s = new Server(dir); await s.start()
@@ -397,16 +397,16 @@ try {
   check('starting with a broken config refuses every change, clearly', brk2.status === 'refused' && brk2.code === 'config_broken' && !whitelist().some(e => e.name === 'P_cfg'), brk2.message)
   check('and says so in the log at startup', s.log.some(l => /config.yml can't be read/.test(l)))
   writeFileSync(cfg, goodCfg)
-  await s.ask('stationmaster reload', 1500)
+  await s.ask('usher reload', 1500)
   check('control: fixed and reloaded, it works again', (await s.sm('apply', offlineUuid('P_cfg'), 'P_cfg', '+young')).status === 'ok')
 
   // ---------- kill -9 in the middle of a change ----------
   console.log('\n# kill -9 in the middle of a change')
   for (const [when, prop] of [['after groups, before the whitelist', 'pause-after-groups'], ['before groups', 'pause-before-groups']]) {
     await s.stop(); await sleep(1000)
-    s = new Server(dir, { props: [`-Dstationmaster.test.${prop}=15000`] }); await s.start()
+    s = new Server(dir, { props: [`-Dusher.test.${prop}=15000`] }); await s.start()
     const name = prop === 'pause-after-groups' ? 'P_kill1' : 'P_kill2'
-    s.send(`stationmaster apply k-${name} ${offlineUuid(name)} ${name} +builders`)
+    s.send(`usher apply k-${name} ${offlineUuid(name)} ${name} +builders`)
     const end = Date.now() + 10000
     while (Date.now() < end && !changesLog().some(e => e.event === 'started' && e.target === name)) await sleep(100)
     await sleep(prop === 'pause-after-groups' ? 3000 : 500)
@@ -441,6 +441,54 @@ try {
   check('control: once LuckPerms can save again, the same change works', (await s.sm('apply', offlineUuid('P_lpfail'), 'P_lpfail', '+builders')).status === 'ok')
   }
 
+  // ---------- Rename from Stationmaster (0.3.x keeps the old names for one release) ----------
+  console.log('\n# The rename from Stationmaster')
+  {
+    await s.ask('whitelist add OldNode', 400)
+    const oldBot = await join('OldNode')
+    await sleep(800)
+    const reply = async () => { oldBot.chat_log.length = 0; oldBot.chat('/usher reload'); await sleep(1200); return oldBot.chat_log.join(' ') }
+    check('control: the OldNode bot is connected and its chat works', /Unknown or incomplete command|Unknown command/i.test(await reply()))
+    const before = await openMenu(oldBot, '/profile P_young edit').then(() => true, () => false)
+    check('control: without either node, OldNode can\'t open the menu', !before)
+    from = s.log.length
+    await s.ask('lp user OldNode permission set stationmaster.approve true', 800)
+    await sleep(500)
+    const opened = await openMenu(oldBot, '/profile P_young edit').then(() => true, () => false)
+    if (oldBot.currentWindow) oldBot.closeWindow(oldBot.currentWindow)
+    check('the old node stationmaster.approve still lets someone approve', opened)
+    check('and the log says to move to usher.approve', s.log.slice(from).some(l => /OldNode approves through the old permission stationmaster\.approve.*usher\.approve/.test(l)))
+    await s.ask('lp user OldNode permission unset stationmaster.approve', 800)
+    await quit(oldBot)
+    for (const old of ['stationmaster', 'smaster']) {
+      from = s.log.length
+      const r = (await s.ask(old + ' reload', 1500)).join(' ')
+      check(`"${old} reload" still works`, /Reloaded: 5 profiles/.test(r), r.slice(0, 160))
+      check(`"${old}" logs that it's the old name`, s.log.slice(from).some(l => /old names for "usher"/.test(l)))
+    }
+    const r = await s.sm('profiles')
+    check('the console result line is now usher-result', r.status === 'ok' && r.hits === 1)
+
+    // A server upgrading from Stationmaster: only plugins/Stationmaster exists.
+    await s.stop(); await sleep(1000)
+    const now = path.join(dir, 'plugins/Usher'), old = path.join(dir, 'plugins/Stationmaster')
+    const sha = f => createHash('sha256').update(readFileSync(f)).digest('hex')
+    const cfgSha = sha(path.join(now, 'config.yml')), logSha = sha(path.join(now, 'changes.log'))
+    renameSync(now, old)
+    s = new Server(dir); await s.start(); await sleep(1500)
+    check('upgrade: plugins/Stationmaster is copied to plugins/Usher on first start',
+      existsSync(now) && sha(path.join(now, 'config.yml')) === cfgSha && sha(path.join(now, 'changes.log')) === logSha)
+    check('upgrade: the old folder is left as it was', existsSync(path.join(old, 'config.yml')) && sha(path.join(old, 'changes.log')) === logSha)
+    check('upgrade: the log says what was copied', s.log.some(l => /Copied plugins\/Stationmaster to plugins\/Usher/.test(l)))
+    const reload2 = (await s.ask('usher reload', 1500)).join(' ')
+    check('upgrade: the copied config is the one in use', /Reloaded: 5 profiles/.test(reload2), reload2.slice(0, 160))
+    writeFileSync(path.join(old, 'config.yml'), 'broken: [')
+    await s.stop(); await sleep(1000)
+    s = new Server(dir); await s.start(); await sleep(1500)
+    check('upgrade: a second start never copies again', !s.log.some(l => /Copied plugins\/Stationmaster/.test(l)) && sha(path.join(now, 'config.yml')) === cfgSha)
+    rmSync(old, { recursive: true, force: true })
+  }
+
   // ---------- LuckPerms missing ----------
   console.log('\n# LuckPerms missing')
   await s.stop(); await sleep(1000)
@@ -449,9 +497,9 @@ try {
   s = new Server(dir); await s.start(); await sleep(1500)
   const miss = await s.sm('apply', offlineUuid('P_nolp'), 'P_nolp', '+builders')
   check('without LuckPerms: refused clearly, and nobody whitelisted', miss.status === 'refused' && miss.code === 'luckperms_missing' && !whitelist().some(e => e.name === 'P_nolp'), miss.message)
-  check('Stationmaster still loads and says why', s.log.some(l => /LuckPerms isn't running/.test(l)) && s.log.some(l => /SPY problem code=luckperms_missing/.test(l)))
+  check('Usher still loads and says why', s.log.some(l => /LuckPerms isn't running/.test(l)) && s.log.some(l => /SPY problem code=luckperms_missing/.test(l)))
   const unexpected = s.errors().filter(l => !/LuckPerms isn't running/.test(l))
-  check('no other errors from Stationmaster in the log', unexpected.length === 0, unexpected[0])
+  check('no other errors from Usher in the log', unexpected.length === 0, unexpected[0])
   await s.stop()
   renameSync(lpJar + '.off', lpJar)
 } catch (e) {
@@ -461,7 +509,7 @@ try {
   for (const b of bots) try { b.quit() } catch {}
   try { if (s.proc?.exitCode === null) await s.stop() } catch {}
   // One throwaway server at a time, and none left behind: delete it as soon as the run ends.
-  if (process.env.STATIONMASTER_TEST_KEEP !== '1') rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 })
+  if (process.env.USHER_TEST_KEEP !== '1') rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 })
 }
 summary()
 console.log(`(${results.length} checks on Paper ${PAPER})`)

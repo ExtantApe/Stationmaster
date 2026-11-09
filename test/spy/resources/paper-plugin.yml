@@ -1,11 +1,11 @@
-name: StationmasterSpy
+name: UsherSpy
 version: '1'
-main: com.extantape.stationmaster.spy.SpyPlugin
+main: com.extantape.usher.spy.SpyPlugin
 api-version: '26.1'
-description: Test only. Logs Stationmaster's events to the console.
+description: Test only. Logs Usher's events to the console.
 dependencies:
   server:
-    Stationmaster:
+    Usher:
       load: BEFORE
       required: true
       join-classpath: true

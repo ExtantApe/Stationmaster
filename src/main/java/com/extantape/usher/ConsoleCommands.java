@@ -1,4 +1,4 @@
-package com.extantape.stationmaster;
+package com.extantape.usher;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -20,24 +20,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
- * /stationmaster: console commands for Leaf Juice and scripts. Each takes a request ID and answers with exactly one
- * line, {@code stationmaster-result <request-id> <json>}, which may come a moment later. See README for the fields.
+ * /usher: console commands for Leaf Juice and scripts. Each takes a request ID and answers with exactly one
+ * line, {@code usher-result <request-id> <json>}, which may come a moment later. See README for the fields.
  */
 final class ConsoleCommands implements BasicCommand {
 
-    static final String PREFIX = "stationmaster-result ";
+    static final String PREFIX = "usher-result ";
     private static final Pattern REQUEST = Pattern.compile("[A-Za-z0-9._:-]{1,64}");
     private static final Pattern VIA = Pattern.compile("[a-z0-9-]{1,32}");
     private static final Gson GSON = new Gson();
     private static final List<String> SUBS = List.of("profiles", "resolve", "show", "apply", "attempts", "log", "reload");
 
-    private final StationmasterPlugin plugin;
+    private final UsherPlugin plugin;
 
-    ConsoleCommands(StationmasterPlugin plugin) { this.plugin = plugin; }
+    ConsoleCommands(UsherPlugin plugin) { this.plugin = plugin; }
 
     /** The console, and approvers in the game (who only get reload). Hidden from everyone else. */
     @Override
-    public boolean canUse(CommandSender sender) { return isConsole(sender) || sender.hasPermission(ChangeService.PERMISSION); }
+    public boolean canUse(CommandSender sender) { return isConsole(sender) || ChangeService.mayApprove(sender); }
 
     static boolean isConsole(CommandSender sender) { return sender instanceof ConsoleCommandSender || sender instanceof RemoteConsoleCommandSender; }
 
@@ -46,12 +46,12 @@ final class ConsoleCommands implements BasicCommand {
         CommandSender sender = source.getSender();
         boolean console = isConsole(sender);
         if (args.length == 0) {
-            sender.sendMessage("Stationmaster " + plugin.getPluginMeta().getVersion() + ": " + String.join(", ", SUBS) + ". See the README for details.");
+            sender.sendMessage("Usher " + plugin.getPluginMeta().getVersion() + ": " + String.join(", ", SUBS) + ". See the README for details.");
             return;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals("reload")) {
-            if (!console && !sender.hasPermission(ChangeService.PERMISSION)) { sender.sendMessage(PlayerCommands.bad("Only approvers can do that.")); return; }
+            if (!console && !ChangeService.mayApprove(sender)) { sender.sendMessage(PlayerCommands.bad("Only approvers can do that.")); return; }
             for (String line : plugin.reload()) sender.sendMessage(line);
             return;
         }
@@ -119,7 +119,7 @@ final class ConsoleCommands implements BasicCommand {
     }
 
     private void resolve(CommandSender sender, String req, String[] rest) {
-        if (rest.length != 1) { reply(sender, req, error("bad_request", "Use: stationmaster resolve <request-id> <name>")); return; }
+        if (rest.length != 1) { reply(sender, req, error("bad_request", "Use: usher resolve <request-id> <name>")); return; }
         plugin.names().resolve(rest[0], plugin.settings().lookup()).whenComplete((who, e) -> {
             if (e != null) { reply(sender, req, nameError(e, rest[0])); return; }
             plugin.runMain(() -> {
@@ -145,7 +145,7 @@ final class ConsoleCommands implements BasicCommand {
     }
 
     private void show(CommandSender sender, String req, String[] rest) {
-        if (rest.length != 1) { reply(sender, req, error("bad_request", "Use: stationmaster show <request-id> <uuid|name>")); return; }
+        if (rest.length != 1) { reply(sender, req, error("bad_request", "Use: usher show <request-id> <uuid|name>")); return; }
         if (!plugin.store().ready()) { reply(sender, req, error("luckperms_missing", "LuckPerms isn't running.")); return; }
         UUID id = parseUuid(rest[0]);
         var who = id != null ? java.util.concurrent.CompletableFuture.completedFuture(new NameResolver.Resolved(id, nameOf(id)))
@@ -174,7 +174,7 @@ final class ConsoleCommands implements BasicCommand {
 
     private void apply(CommandSender sender, String req, String[] rest) {
         if (rest.length < 2) {
-            reply(sender, req, error("bad_request", "Use: stationmaster apply <request-id> <uuid> <name> [+profile] [-profile] [confirm=code,code] [whitelist=no] [via=leaf-juice]"));
+            reply(sender, req, error("bad_request", "Use: usher apply <request-id> <uuid> <name> [+profile] [-profile] [confirm=code,code] [whitelist=no] [via=leaf-juice]"));
             return;
         }
         UUID id = parseUuid(rest[0]);
@@ -196,7 +196,7 @@ final class ConsoleCommands implements BasicCommand {
         }
         var request = new ChangeService.Request(req, ChangeService.Actor.console(via), id, rest[1], add, remove, confirmed, whitelist);
         plugin.changes().submit(request).whenComplete((result, e) -> {
-            if (e != null || result == null) reply(sender, req, error("internal", "Something went wrong inside Stationmaster. See the server log."));
+            if (e != null || result == null) reply(sender, req, error("internal", "Something went wrong inside Usher. See the server log."));
             else reply(sender, req, result.json());
         });
     }
@@ -220,7 +220,7 @@ final class ConsoleCommands implements BasicCommand {
     private void log(CommandSender sender, String req, String[] rest) {
         int count = 20;
         if (rest.length == 1) try { count = Math.max(1, Math.min(200, Integer.parseInt(rest[0]))); } catch (NumberFormatException e) {
-            reply(sender, req, error("bad_request", "Use: stationmaster log <request-id> [count]"));
+            reply(sender, req, error("bad_request", "Use: usher log <request-id> [count]"));
             return;
         }
         if (plugin.audit() == null) { reply(sender, req, error("log_failed", "changes.log can't be opened.")); return; }

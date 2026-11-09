@@ -1,11 +1,11 @@
-# Stationmaster
+# Usher
 
-A Paper plugin for whitelisted servers. Admins approve a new player and choose their profiles, and Stationmaster sets their whitelist entry and LuckPerms groups. Nobody types LuckPerms commands.
+A Paper plugin for whitelisted servers. Admins approve a new player and choose their profiles, and Usher sets their whitelist entry and LuckPerms groups. Nobody types LuckPerms commands.
 
 **Status:** pre-release. It passes its bot tests on throwaway Paper 26.1.2, 26.2 and 26.3 servers with LuckPerms and Multiverse. It hasn't been used on a real server or seen in a real game client yet. See [Testing](#testing).
 
 - Paper 26.1 or newer, on Java 25. There's no support for 1.21.x.
-- Needs LuckPerms. Without it, Stationmaster still loads but refuses every change and says why.
+- Needs LuckPerms. Without it, Usher still loads but refuses every change and says why.
 - Works with Multiverse and Multiverse-Inventories, but doesn't need them.
 
 ## What it does
@@ -15,7 +15,7 @@ A profile is a LuckPerms group, such as "Builders", plus the worlds that group o
 - Adds or removes groups through LuckPerms' API. The change applies at once and survives restarts.
 - Saves the groups first, then adds the person to the whitelist. If LuckPerms fails, they aren't whitelisted.
 - Sends anyone standing in a world they just lost to the lobby. It's an ordinary teleport, so Multiverse-Inventories keeps their things with the world they left.
-- Logs who changed what and when, in `plugins/Stationmaster/changes.log`.
+- Logs who changed what and when, in `plugins/Usher/changes.log`.
 
 Approving someone with no profile gives them whatever LuckPerms' default group allows.
 
@@ -23,24 +23,24 @@ There are three ways to do it:
 
 - **In the game:** `/approve <name>` opens a chest menu. Click profiles on or off, then press Approve.
 - **From Leaf Juice or a script:** through the server console. See [Console commands](#console-commands).
-- **From Discord or another plugin:** Stationmaster fires Paper events that a bridge plugin can listen to. See [Events](#events).
+- **From Discord or another plugin:** Usher fires Paper events that a bridge plugin can listen to. See [Events](#events).
 
 ### Safety rules
 
-- Only `stationmaster.approve` can approve or change profiles. Players without it don't see the commands at all.
+- Only `usher.approve` can approve or change profiles. Players without it don't see the commands at all.
 - Nobody can approve themselves or change their own profiles, even with the permission. The console can.
 - `restricted-groups` are never added or removed. A profile is refused, with a warning in the log, if its group:
   - is on that list, in any capitals,
   - inherits a group on that list,
   - grants every permission (`*`), or
-  - grants `stationmaster.approve` or LuckPerms editing.
+  - grants `usher.approve` or LuckPerms editing.
   These checks run at startup and again on every change, so they still hold if a group changes after a menu opens.
 - Adding a profile that puts someone in two chat circles at once (see `circle` in the config) asks for a yes first. A profile with a `confirm` question, such as an adults-only world, does too. A yes to one question doesn't cover another.
 - Changes run one at a time. Two admins editing the same person both get their change. If both add the same profile, it's added once.
 - Nothing is changed until Approve or Save is pressed. Closing the menu cancels. Every click in the menu is cancelled, so no item can be taken out.
 - The menu says whether the account has played here, has tried to join, or has never tried. An account that has never tried gets a warning, so a mistyped name that belongs to a stranger is easy to spot.
 
-Children play on the servers this was built for. [docs/kids-first.md](docs/kids-first.md) says how Stationmaster protects them and what it leaves to the people running it. Owner decisions are recorded in [docs/decisions.md](docs/decisions.md).
+Children play on the servers this was built for. [docs/kids-first.md](docs/kids-first.md) says how Usher protects them and what it leaves to the people running it. Owner decisions are recorded in [docs/decisions.md](docs/decisions.md).
 
 ### The menu
 
@@ -48,11 +48,11 @@ Each profile shows its state in words with a symbol: ✔ On, + Will be added, �
 
 ## Install
 
-1. Put `Stationmaster-<version>.jar` in `plugins/`, next to LuckPerms.
-2. Start the server once, then edit `plugins/Stationmaster/config.yml`. The profiles in it are examples.
+1. Put `Usher-<version>.jar` in `plugins/`, next to LuckPerms.
+2. Start the server once, then edit `plugins/Usher/config.yml`. The profiles in it are examples.
 3. Create each profile's group in LuckPerms, and give it its worlds, for example `multiverse.access.<world>`.
-4. Run `stationmaster reload` in the console.
-5. Grant `stationmaster.approve` to the people who approve, and nobody else.
+4. Run `usher reload` in the console.
+5. Grant `usher.approve` to the people who approve, and nobody else.
 
 The lobby must be open to everyone, since people are sent there. If Multiverse's `enforce-access` is on, the default group needs `multiverse.access.<lobby>`.
 
@@ -62,7 +62,7 @@ The lobby must be open to everyone, since people are sent there. If Multiverse's
 | --- | --- |
 | `lobby-world` | Where people go when a world closes to them. Blank means the main world. |
 | `name-lookup` | How typed names become accounts. `auto` asks Mojang in online mode. `mojang` always asks, which is right behind a proxy. `offline` never asks. |
-| `restricted-groups` | Groups Stationmaster never touches. |
+| `restricted-groups` | Groups Usher never touches. |
 | `profiles.<id>.group` | The LuckPerms group. It must exist. |
 | `profiles.<id>.worlds` | Worlds this profile opens. `*` matches anything, so `explore*` covers `explore_nether`. |
 | `profiles.<id>.circle` | The chat circle it joins, for the two-circles warning. |
@@ -70,17 +70,26 @@ The lobby must be open to everyone, since people are sent there. If Multiverse's
 | `profiles.<id>.toggle` | `true` puts it in the menu's lower rows, as an extra. |
 | `profiles.<id>.granted` | What the player sees when it's added. |
 
-A config that can't be read at startup makes Stationmaster refuse every change until it's fixed. A broken file on `reload` keeps the settings already in use.
+A config that can't be read at startup makes Usher refuse every change until it's fixed. A broken file on `reload` keeps the settings already in use.
 
 ### Names
 
-`/approve` and the console take a name that has never joined, in any capitals, and find the real account. Stationmaster checks, in this order:
+`/approve` and the console take a name that has never joined, in any capitals, and find the real account. Usher checks, in this order:
 
 1. Players the server already knows.
 2. People the whitelist recently turned away.
 3. Mojang's public profile lookup, in online or `mojang` mode.
 
-A typo fails with "No Minecraft account is called …". If Mojang can't be reached, Stationmaster says that instead of guessing, and nothing changes. In `offline` mode, capitals matter for names the server hasn't seen, because offline accounts are built from the exact name.
+A typo fails with "No Minecraft account is called …". If Mojang can't be reached, Usher says that instead of guessing, and nothing changes. In `offline` mode, capitals matter for names the server hasn't seen, because offline accounts are built from the exact name.
+
+## Upgrading from Stationmaster
+
+Usher was called Stationmaster up to 0.2.1. It was renamed in 0.3.0; nothing else changed in how it works.
+
+- Remove `Stationmaster-0.2.1.jar` and add `Usher-0.3.0.jar`, with the server stopped.
+- On its first start, Usher copies `plugins/Stationmaster/` to `plugins/Usher/` if `plugins/Usher/` doesn't exist yet: your config, `changes.log` and `join-attempts.json` come across unchanged. The old folder is left as it was; delete it once you're happy. If `plugins/Usher/` already exists, nothing is copied.
+- For 0.3.x only, the old names still work and log a line saying what to change: the permission `stationmaster.approve` and the console command `stationmaster` (also `smaster`). Both go in the next release. Grant `usher.approve` instead: `lp group <group> permission set usher.approve true`.
+- The console result line is now `usher-result`, and the API package is `com.extantape.usher.api` (`UsherProblemEvent` was `StationmasterProblemEvent`). Nothing published used the old ones.
 
 ## Commands
 
@@ -89,12 +98,14 @@ A typo fails with "No Minecraft account is called …". If Mojang can't be reach
 | `/approve <name>` | approvers | Opens the menu to whitelist someone and choose their profiles. |
 | `/profile <name>` | approvers, console | Shows someone's profiles, with a button to change them. |
 | `/profile <name> edit` | approvers | Opens the menu to change their profiles. |
-| `/stationmaster reload` | approvers, console | Re-reads `config.yml`. |
-| `stationmaster <command> <request-id> …` | console | The commands below, for Leaf Juice and scripts. Also `smaster`. |
+| `/usher reload` | approvers, console | Re-reads `config.yml`. |
+| `usher <command> <request-id> …` | console | The commands below, for Leaf Juice and scripts. |
+
+Approvers need `usher.approve`. It's `false` by default, operators included.
 
 ## Console commands
 
-Each takes a request ID you choose (1 to 64 letters, digits, `.`, `_`, `:` or `-`). Each answers with exactly one line, `stationmaster-result <request-id> <json>`, sometimes a moment later. Every answer has `status` (`ok`, `warn`, `refused` or `error`), `code` and a `message` that's fine to show a person.
+Each takes a request ID you choose (1 to 64 letters, digits, `.`, `_`, `:` or `-`). Each answers with exactly one line, `usher-result <request-id> <json>`, sometimes a moment later. Every answer has `status` (`ok`, `warn`, `refused` or `error`), `code` and a `message` that's fine to show a person.
 
 | Command | Answers with |
 | --- | --- |
@@ -114,19 +125,19 @@ How `apply` works:
 Example:
 
 ```
-> stationmaster apply r42 069a79f4-44e9-4726-a5be-fca90e38aaf5 Notch +builders via=leaf-juice
-stationmaster-result r42 {"status":"ok","code":"applied","message":"Notch is approved and can join now, with Builders.", ...}
+> usher apply r42 069a79f4-44e9-4726-a5be-fca90e38aaf5 Notch +builders via=leaf-juice
+usher-result r42 {"status":"ok","code":"applied","message":"Notch is approved and can join now, with Builders.", ...}
 ```
 
 ## Events
 
-Stationmaster sends nothing over the network itself, apart from name lookups to Mojang. To post to Discord, listen to these events from another plugin. All fire on the main thread. They carry names and profiles, which can show who is a child, so post them only to a channel that just the admins can read.
+Usher sends nothing over the network itself, apart from name lookups to Mojang. To post to Discord, listen to these events from another plugin. All fire on the main thread. They carry names and profiles, which can show who is a child, so post them only to a channel that just the admins can read.
 
 | Event | When |
 | --- | --- |
-| `com.extantape.stationmaster.api.ProfilesChangedEvent` | Someone was approved or their profiles changed. It has who, by whom, how, what was added and removed, and any warnings said yes to. |
-| `com.extantape.stationmaster.api.JoinAttemptEvent` | Someone not on the whitelist tried to join. At most once every ten minutes per account. |
-| `com.extantape.stationmaster.api.StationmasterProblemEvent` | LuckPerms missing or failing, a config problem, a refused restricted group, self-approval, or a change cut off by a crash. |
+| `com.extantape.usher.api.ProfilesChangedEvent` | Someone was approved or their profiles changed. It has who, by whom, how, what was added and removed, and any warnings said yes to. |
+| `com.extantape.usher.api.JoinAttemptEvent` | Someone not on the whitelist tried to join. At most once every ten minutes per account. |
+| `com.extantape.usher.api.UsherProblemEvent` | LuckPerms missing or failing, a config problem, a refused restricted group, self-approval, or a change cut off by a crash. |
 
 ## If the server stops mid-change
 
@@ -136,7 +147,7 @@ Each change writes a `started` line to `changes.log` before LuckPerms is touched
 
 `./gradlew build` runs the unit tests: config parsing, the safety rules, the warnings and the change log's crash handling.
 
-The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.1 port 25615. Each has LuckPerms, Multiverse-Core, Multiverse-Inventories, made-up worlds and groups, and mineflayer bots as players. Every result that says "blocked" has a check beside it showing the same thing works when it should. See the top of `test/harness.mjs` for setup, then run `node test/acceptance.mjs`. It runs one server at a time and deletes it when the run ends. Set `STATIONMASTER_TEST_KEEP=1` to keep it for a look. LuckPerms uses YAML storage unless `STATIONMASTER_TEST_STORAGE=h2`.
+The bot tests in `test/` build fresh Paper servers in a temp folder, on 127.0.0.1 port 25615. Each has LuckPerms, Multiverse-Core, Multiverse-Inventories, made-up worlds and groups, and mineflayer bots as players. Every result that says "blocked" has a check beside it showing the same thing works when it should. See the top of `test/harness.mjs` for setup, then run `node test/acceptance.mjs`. It runs one server at a time and deletes it when the run ends. Set `USHER_TEST_KEEP=1` to keep it for a look. LuckPerms uses YAML storage unless `USHER_TEST_STORAGE=h2`.
 
 **Passed on Paper 26.1.2, 26.2 and 26.3 (2026-11-07), 100 checks each:**
 

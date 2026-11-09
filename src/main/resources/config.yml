@@ -1,5 +1,5 @@
-# Stationmaster settings. The profiles below are examples: replace them with your own groups and worlds.
-# After editing, run "stationmaster reload" in the console or /stationmaster reload in the game.
+# Usher settings. The profiles below are examples: replace them with your own groups and worlds.
+# After editing, run "usher reload" in the console or /usher reload in the game.
 
 # Where people are sent when a world closes to them. Blank means the server's main world.
 lobby-world: ""
@@ -10,9 +10,9 @@ lobby-world: ""
 #   offline: never ask Mojang. Only right for offline-mode servers, where capitals in a name matter.
 name-lookup: auto
 
-# Groups Stationmaster never adds or removes, whatever the profiles say. Change these from the console.
+# Groups Usher never adds or removes, whatever the profiles say. Change these from the console.
 # A profile whose group is listed here, or inherits one listed here, is refused. So is any profile whose
-# group grants every permission ("*"), stationmaster.approve or LuckPerms editing.
+# group grants every permission ("*"), usher.approve or LuckPerms editing.
 restricted-groups: [admin, owner, moderator]
 
 # Each profile adds the person to one LuckPerms group, which should grant that profile's worlds

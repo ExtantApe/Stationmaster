@@ -1,4 +1,4 @@
-package com.extantape.stationmaster;
+package com.extantape.usher;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -10,7 +10,7 @@ import java.util.TreeSet;
 public final class Planner {
 
     /** Permissions a profile's group must never carry, since they'd let the person approve or edit permissions. */
-    static final List<String> ADMIN_PERMISSIONS = List.of("stationmaster.approve", "luckperms.user.parent.add", "luckperms.editor");
+    static final List<String> ADMIN_PERMISSIONS = List.of("usher.approve", "stationmaster.approve", "luckperms.user.parent.add", "luckperms.editor");
 
     public record Warning(String code, String text) {}
 
@@ -32,7 +32,7 @@ public final class Planner {
 
     public static Plan plan(Settings settings, GroupStore store, GroupStore.UserState state,
                             Set<String> addIds, Set<String> removeIds, Set<String> confirmed) {
-        if (!settings.ok()) return Plan.refuse("config_broken", "Stationmaster's config is broken, so nothing was changed.");
+        if (!settings.ok()) return Plan.refuse("config_broken", "Usher's config is broken, so nothing was changed.");
         for (String id : addIds) if (removeIds.contains(id))
             return Plan.refuse("conflict", "You asked to add and remove " + id + " at once, so nothing was changed.");
         Set<String> all = new LinkedHashSet<>(addIds);
@@ -75,17 +75,17 @@ public final class Planner {
         return new Plan(null, null, List.copyOf(warnings), unconfirmed, add, remove, had, notHad, kept);
     }
 
-    /** Why a profile may never be granted or removed by Stationmaster, or null if it's fine. */
+    /** Why a profile may never be granted or removed by Usher, or null if it's fine. */
     public static String unsafe(Settings settings, GroupStore store, Profile p) {
         if (settings.restricted().contains(p.group()))
             return "The " + p.label() + " group can only be changed from the server console by an owner, so nothing was changed.";
         Set<String> lineage = store.lineage(p.group());
         if (lineage.isEmpty()) return "The group for " + p.label() + " (" + p.group() + ") doesn't exist in LuckPerms, so nothing was changed.";
         for (String g : lineage) if (settings.restricted().contains(g))
-            return p.label() + " inherits the restricted group " + g + ", so Stationmaster won't touch it. Nothing was changed.";
-        if (store.grants(p.group(), "*")) return p.label() + " grants every permission, so Stationmaster won't touch it. Nothing was changed.";
+            return p.label() + " inherits the restricted group " + g + ", so Usher won't touch it. Nothing was changed.";
+        if (store.grants(p.group(), "*")) return p.label() + " grants every permission, so Usher won't touch it. Nothing was changed.";
         for (String perm : ADMIN_PERMISSIONS) if (store.grants(p.group(), perm))
-            return p.label() + " grants " + perm + ", an admin permission, so Stationmaster won't touch it. Nothing was changed.";
+            return p.label() + " grants " + perm + ", an admin permission, so Usher won't touch it. Nothing was changed.";
         return null;
     }
 

@@ -1,4 +1,4 @@
-package com.extantape.stationmaster;
+package com.extantape.usher;
 
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.ItemLore;
@@ -75,13 +75,13 @@ final class PickerMenus implements Listener {
         Set<String> removes() { Set<String> s = new LinkedHashSet<>(startOn); s.removeAll(wanted); return s; }
     }
 
-    private final StationmasterPlugin plugin;
+    private final UsherPlugin plugin;
     private final Map<UUID, Menu> open = new HashMap<>();
 
-    PickerMenus(StationmasterPlugin plugin) { this.plugin = plugin; }
+    PickerMenus(UsherPlugin plugin) { this.plugin = plugin; }
 
     void open(Player admin, NameResolver.Resolved target, boolean approving, GroupStore.UserState state) {
-        if (!admin.hasPermission(ChangeService.PERMISSION)) return;
+        if (!ChangeService.mayApprove(admin)) return;
         if (admin.getUniqueId().equals(target.id())) return;
         Menu menu = new Menu(admin, target, approving, state, plugin.settings());
         drawPick(menu);
@@ -249,7 +249,7 @@ final class PickerMenus implements Listener {
         if (event.getClickedInventory() != m.inventory) return;
         if (event.getClick() != ClickType.LEFT && event.getClick() != ClickType.RIGHT) return;
         if (!(event.getWhoClicked() instanceof Player admin) || !admin.getUniqueId().equals(m.admin) || open.get(m.admin) != m) return;
-        if (!admin.hasPermission(ChangeService.PERMISSION)) {
+        if (!ChangeService.mayApprove(admin)) {
             m.phase = Phase.DONE;
             Bukkit.getScheduler().runTask(plugin, () -> admin.closeInventory());
             admin.sendMessage(PlayerCommands.bad("You no longer have permission to change profiles."));

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.extantape"
-version = "0.2.1"
+version = "0.3.0"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(25))
@@ -45,11 +45,11 @@ tasks.test {
 }
 
 tasks.jar {
-    archiveBaseName.set("Stationmaster")
+    archiveBaseName.set("Usher")
     from("LICENSE")
 }
 
-// Test only: a tiny plugin that logs Stationmaster's events, for the bot tests in test/. Never shipped.
+// Test only: a tiny plugin that logs Usher's events, for the bot tests in test/. Never shipped.
 val spy: SourceSet = sourceSets.create("spy") {
     java.srcDir("test/spy/java")
     resources.srcDir("test/spy/resources")
@@ -58,6 +58,6 @@ val spy: SourceSet = sourceSets.create("spy") {
 dependencies { "spyCompileOnly"(paperApi) }
 tasks.register<Jar>("spyJar") {
     from(spy.output)
-    archiveFileName.set("StationmasterSpy.jar")
+    archiveFileName.set("UsherSpy.jar")
     destinationDirectory.set(layout.buildDirectory.dir("test-spy"))
 }

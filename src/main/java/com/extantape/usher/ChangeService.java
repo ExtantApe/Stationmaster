@@ -1,7 +1,7 @@
-package com.extantape.stationmaster;
+package com.extantape.usher;
 
-import com.extantape.stationmaster.api.ProfilesChangedEvent;
-import com.extantape.stationmaster.api.StationmasterProblemEvent;
+import com.extantape.usher.api.ProfilesChangedEvent;
+import com.extantape.usher.api.UsherProblemEvent;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.bukkit.Bukkit;
@@ -30,7 +30,21 @@ import java.util.logging.Level;
  */
 public final class ChangeService {
 
-    public static final String PERMISSION = "stationmaster.approve";
+    public static final String PERMISSION = "usher.approve";
+    /** The node from before the rename (2026-11-09). Honoured for one release (0.3.x), then removed. */
+    public static final String OLD_PERMISSION = "stationmaster.approve";
+    private static final java.util.Set<String> warnedOld = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    static volatile java.util.logging.Logger log;
+
+    /** True for approvers. Accepts the old node too, for one release, and logs once per name that it should move. */
+    public static boolean mayApprove(org.bukkit.permissions.Permissible who) {
+        if (who.hasPermission(PERMISSION)) return true;
+        if (!who.hasPermission(OLD_PERMISSION)) return false;
+        String name = who instanceof org.bukkit.command.CommandSender cs ? cs.getName() : String.valueOf(who);
+        if (warnedOld.add(name) && log != null)
+            log.warning(name + " approves through the old permission " + OLD_PERMISSION + ". It still works in 0.3.x but goes in the next release: grant " + PERMISSION + " instead.");
+        return true;
+    }
 
     /** Who asked. {@code uuid} is null for the console. {@code via} is menu, console or leaf-juice. */
     public record Actor(String name, UUID uuid, String via) {
@@ -46,14 +60,14 @@ public final class ChangeService {
         public boolean ok() { return status.equals("ok"); }
     }
 
-    private final StationmasterPlugin plugin;
+    private final UsherPlugin plugin;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "Stationmaster changes");
+        Thread t = new Thread(r, "Usher changes");
         t.setDaemon(true);
         return t;
     });
 
-    ChangeService(StationmasterPlugin plugin) { this.plugin = plugin; }
+    ChangeService(UsherPlugin plugin) { this.plugin = plugin; }
 
     public CompletableFuture<Result> submit(Request request) {
         return CompletableFuture.supplyAsync(() -> {
@@ -61,7 +75,7 @@ public final class ChangeService {
                 return run(request);
             } catch (RuntimeException e) {
                 plugin.getLogger().log(Level.SEVERE, "A change for " + request.targetName() + " failed unexpectedly", e);
-                return result(request, "error", "internal", "Something went wrong inside Stationmaster, so the change stopped. See the server log.", List.of(), null, false, false);
+                return result(request, "error", "internal", "Something went wrong inside Usher, so the change stopped. See the server log.", List.of(), null, false, false);
             }
         }, worker);
     }
@@ -72,7 +86,7 @@ public final class ChangeService {
         Settings settings = plugin.settings();
         GroupStore store = plugin.store();
         AuditLog audit = plugin.audit();
-        if (audit == null) return result(r, "error", "log_failed", "Stationmaster can't open its change log, so nothing was changed.", List.of(), null, false, false);
+        if (audit == null) return result(r, "error", "log_failed", "Usher can't open its change log, so nothing was changed.", List.of(), null, false, false);
 
         if (r.requestId() != null) {
             JsonObject previous = audit.resultFor(r.requestId());
@@ -88,11 +102,11 @@ public final class ChangeService {
 
         // Checks that need the main thread: permissions and the whitelist.
         String[] pre = callMain(() -> {
-            if (!plugin.settings().ok()) return new String[]{"config_broken", "Stationmaster's config is broken, so nothing was changed. " + plugin.settings().problems().get(0)};
+            if (!plugin.settings().ok()) return new String[]{"config_broken", "Usher's config is broken, so nothing was changed. " + plugin.settings().problems().get(0)};
             if (!plugin.store().ready()) return new String[]{"luckperms_missing", "LuckPerms isn't running, so nothing was changed."};
             if (!r.actor().isConsole()) {
                 Player admin = Bukkit.getPlayer(r.actor().uuid());
-                if (admin == null || !admin.hasPermission(PERMISSION)) return new String[]{"not_permitted", "You don't have permission to approve people or change profiles."};
+                if (admin == null || !mayApprove(admin)) return new String[]{"not_permitted", "You don't have permission to approve people or change profiles."};
                 if (admin.getUniqueId().equals(r.target())) return new String[]{"self", "You can't approve yourself or change your own profiles. Ask another admin."};
             }
             return new String[]{null, Boolean.toString(Bukkit.getOfflinePlayer(r.target()).isWhitelisted())};
@@ -125,10 +139,10 @@ public final class ChangeService {
             audit.write(entry(r, seq, "started", plan, settings, null));
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Couldn't write changes.log", e);
-            return problem(r, "log_failed", "Stationmaster couldn't write its change log, so nothing was changed.");
+            return problem(r, "log_failed", "Usher couldn't write its change log, so nothing was changed.");
         }
 
-        pause("stationmaster.test.pause-before-groups");
+        pause("usher.test.pause-before-groups");
         GroupStore.UserState after;
         try {
             after = plan.addGroups().isEmpty() && plan.removeGroups().isEmpty() ? state
@@ -136,7 +150,7 @@ public final class ChangeService {
         } catch (Exception e) {
             return luckPermsFailed(r, seq, e);
         }
-        pause("stationmaster.test.pause-after-groups");
+        pause("usher.test.pause-after-groups");
 
         List<String> added = ids(settings, plan.addGroups()), removed = ids(settings, plan.removeGroups());
         // Found by name, so the whitelist entry carries the name and not just the UUID. Only used if it's the same account.
@@ -187,7 +201,7 @@ public final class ChangeService {
     }
 
     private void fireProblem(String code, String message, Request r) {
-        plugin.runMain(() -> Bukkit.getPluginManager().callEvent(new StationmasterProblemEvent(code, message, r.target(), r.actor().name())));
+        plugin.runMain(() -> Bukkit.getPluginManager().callEvent(new UsherProblemEvent(code, message, r.target(), r.actor().name())));
     }
 
     private void log(AuditLog audit, JsonObject entry) {
@@ -239,7 +253,7 @@ public final class ChangeService {
             sb.append(name).append(" now has ").append(labels(s, added)).append(".");
         }
         if (!removed.isEmpty()) sb.append(sb.isEmpty() ? "" : " ").append(labels(s, removed)).append(removed.size() == 1 ? " was" : " were").append(" taken off ").append(name).append(".");
-        if (!plan.keptByInheritance().isEmpty()) sb.append(" They still get ").append(labels(s, plan.keptByInheritance())).append(" through another group, which Stationmaster can't change.");
+        if (!plan.keptByInheritance().isEmpty()) sb.append(" They still get ").append(labels(s, plan.keptByInheritance())).append(" through another group, which Usher can't change.");
         return sb.toString().trim();
     }
 
@@ -247,7 +261,7 @@ public final class ChangeService {
         StringBuilder sb = new StringBuilder("Nothing to change for ").append(r.targetName()).append(".");
         if (!plan.alreadyHad().isEmpty()) sb.append(" They already have ").append(labels(s, plan.alreadyHad())).append(".");
         if (!plan.didNotHave().isEmpty()) sb.append(" They didn't have ").append(labels(s, plan.didNotHave())).append(".");
-        if (!plan.keptByInheritance().isEmpty()) sb.append(" They get ").append(labels(s, plan.keptByInheritance())).append(" through another group, which Stationmaster can't change.");
+        if (!plan.keptByInheritance().isEmpty()) sb.append(" They get ").append(labels(s, plan.keptByInheritance())).append(" through another group, which Usher can't change.");
         return sb.toString();
     }
 

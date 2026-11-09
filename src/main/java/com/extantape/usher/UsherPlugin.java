@@ -1,6 +1,6 @@
-package com.extantape.stationmaster;
+package com.extantape.usher;
 
-import com.extantape.stationmaster.api.StationmasterProblemEvent;
+import com.extantape.usher.api.UsherProblemEvent;
 import com.google.gson.JsonObject;
 import net.luckperms.api.LuckPerms;
 import org.bukkit.Bukkit;
@@ -19,7 +19,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-public final class StationmasterPlugin extends JavaPlugin {
+public final class UsherPlugin extends JavaPlugin {
 
     private volatile Settings settings = Settings.broken("not loaded yet");
     private volatile GroupStore store = new LuckPermsStore.Missing();
@@ -32,6 +32,8 @@ public final class StationmasterPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        ChangeService.log = getLogger();
+        migrateFromStationmaster();
         saveDefaultConfig();
         settings = readSettings();
         report(settings);
@@ -39,7 +41,7 @@ public final class StationmasterPlugin extends JavaPlugin {
         try {
             audit = new AuditLog(getDataFolder().toPath().resolve("changes.log"));
         } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "Can't open changes.log, so Stationmaster will refuse every change", e);
+            getLogger().log(Level.SEVERE, "Can't open changes.log, so Usher will refuse every change", e);
             settings = Settings.broken("changes.log can't be opened");
             audit = null;
         }
@@ -64,7 +66,9 @@ public final class StationmasterPlugin extends JavaPlugin {
             var commands = event.registrar();
             commands.register("approve", "Let someone in and choose their profiles.", players.approve());
             commands.register("profile", "See or change someone's profiles.", players.profile());
-            commands.register("stationmaster", "Console commands for Leaf Juice and scripts, and reload.", List.of("smaster"), console);
+            commands.register("usher", "Console commands for Leaf Juice and scripts, and reload.", console);
+            // The old names, for one release (0.3.x) after the rename. Each use logs where to move.
+            commands.register("stationmaster", "Old name for /usher. Goes in the next release.", List.of("smaster"), deprecated(console));
         });
 
         // After startup, so listeners from other plugins hear about problems.
@@ -72,7 +76,7 @@ public final class StationmasterPlugin extends JavaPlugin {
             checkProfilesAgainstLuckPerms();
             if (!settings.ok()) callProblem("config_broken", settings.problems().get(0));
             else for (String p : settings.problems()) callProblem("config_problem", p);
-            if (!store.ready()) callProblem("luckperms_missing", "LuckPerms isn't running, so Stationmaster can't change anyone's profiles.");
+            if (!store.ready()) callProblem("luckperms_missing", "LuckPerms isn't running, so Usher can't change anyone's profiles.");
             if (audit != null) recoverUnfinished();
         });
     }
@@ -85,7 +89,7 @@ public final class StationmasterPlugin extends JavaPlugin {
 
     private GroupStore connectLuckPerms() {
         if (!getServer().getPluginManager().isPluginEnabled("LuckPerms")) {
-            getLogger().severe("LuckPerms isn't running. Stationmaster will load, but it will refuse every change until LuckPerms works.");
+            getLogger().severe("LuckPerms isn't running. Usher will load, but it will refuse every change until LuckPerms works.");
             return new LuckPermsStore.Missing();
         }
         try {
@@ -94,7 +98,7 @@ public final class StationmasterPlugin extends JavaPlugin {
         } catch (Throwable e) {
             getLogger().log(Level.SEVERE, "Couldn't reach LuckPerms' API", e);
         }
-        getLogger().severe("LuckPerms is loaded but its API isn't available, so Stationmaster will refuse every change.");
+        getLogger().severe("LuckPerms is loaded but its API isn't available, so Usher will refuse every change.");
         return new LuckPermsStore.Missing();
     }
 
@@ -113,7 +117,7 @@ public final class StationmasterPlugin extends JavaPlugin {
         if (!fresh.ok()) {
             report(fresh);
             callProblem("config_broken", fresh.problems().get(0));
-            return List.of("Couldn't reload: " + fresh.problems().get(0), settings.ok() ? "Still using the settings from before." : "Stationmaster still refuses every change until config.yml is fixed.");
+            return List.of("Couldn't reload: " + fresh.problems().get(0), settings.ok() ? "Still using the settings from before." : "Usher still refuses every change until config.yml is fixed.");
         }
         settings = fresh;
         report(fresh);
@@ -126,7 +130,7 @@ public final class StationmasterPlugin extends JavaPlugin {
     }
 
     private void report(Settings s) {
-        if (!s.ok()) getLogger().severe(s.problems().get(0) + " Stationmaster will refuse every change until it's fixed.");
+        if (!s.ok()) getLogger().severe(s.problems().get(0) + " Usher will refuse every change until it's fixed.");
         else for (String p : s.problems()) getLogger().warning(p);
     }
 
@@ -139,7 +143,7 @@ public final class StationmasterPlugin extends JavaPlugin {
             String why = Planner.unsafe(settings, store, p);
             if (why == null) { keep.put(p.id(), p); continue; }
             String line = "Profile " + p.id() + " is left out: " + why.replace(" Nothing was changed.", "").replace(", so nothing was changed.", ".")
-                    + (why.contains("doesn't exist") ? " Create the group, then run stationmaster reload." : "");
+                    + (why.contains("doesn't exist") ? " Create the group, then run usher reload." : "");
             problems.add(line);
             getLogger().warning(line);
             callProblem(why.contains("doesn't exist") ? "config_problem" : "restricted", line);
@@ -195,7 +199,7 @@ public final class StationmasterPlugin extends JavaPlugin {
     }
 
     void callProblem(String code, String message) {
-        Bukkit.getPluginManager().callEvent(new StationmasterProblemEvent(code, message, null, null));
+        Bukkit.getPluginManager().callEvent(new UsherProblemEvent(code, message, null, null));
     }
 
     void runMain(Runnable r) {
@@ -213,4 +217,28 @@ public final class StationmasterPlugin extends JavaPlugin {
     ChangeService changes() { return changes; }
     NameResolver names() { return names; }
     PickerMenus menus() { return menus; }
+
+    /** Wraps the console command so the old names keep working for one release, with a nudge in the log. */
+    private io.papermc.paper.command.brigadier.BasicCommand deprecated(ConsoleCommands console) {
+        return new io.papermc.paper.command.brigadier.BasicCommand() {
+            @Override public void execute(io.papermc.paper.command.brigadier.CommandSourceStack source, String[] args) {
+                getLogger().warning("\"stationmaster\" and \"smaster\" are the old names for \"usher\". They still work in 0.3.x but go in the next release.");
+                console.execute(source, args);
+            }
+            @Override public java.util.Collection<String> suggest(io.papermc.paper.command.brigadier.CommandSourceStack source, String[] args) { return console.suggest(source, args); }
+            @Override public boolean canUse(org.bukkit.command.CommandSender sender) { return console.canUse(sender); }
+        };
+    }
+
+    /**
+     * The plugin was called Stationmaster before 0.3.0. If plugins/Usher doesn't exist yet and plugins/Stationmaster
+     * does, copy it across (config, changes.log, join-attempts.json) so nothing is lost. The old folder is left as it
+     * was, as a backup. Nothing is overwritten: if plugins/Usher exists, this does nothing.
+     */
+    private void migrateFromStationmaster() {
+        Path now = getDataFolder().toPath();
+        Path old = now.resolveSibling("Stationmaster");
+        String done = Migration.copyIfMissing(old, now);
+        if (done != null) getLogger().warning(done);
+    }
 }

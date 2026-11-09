@@ -1,4 +1,4 @@
-package com.extantape.stationmaster.api;
+package com.extantape.usher.api;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
