@@ -205,6 +205,8 @@ try {
   console.log('\n# The menu')
   let w = await openMenu(adminA, '/approve P_menu')
   check('/approve opens the menu for a name that has never joined', w && itemAt(adminA, SLOT.young) === 'oak_sapling' && itemAt(adminA, SLOT.CONFIRM) === 'lime_concrete')
+  // kids-first.md: an account that has never tried to join gets a warning, the main guard against a mistyped stranger.
+  check('an account that has never tried to join gets the ⚠ warning in the menu', /Has never tried to join this server/.test(JSON.stringify((w?.slots ?? []).slice(0, 54).filter(Boolean))))
   check('restricted groups never appear in it', !Object.values(w.slots.slice(0, 54)).some(i => i && /admin|moderator|owner/i.test(JSON.stringify(i.customName ?? ''))))
   await click(adminA, SLOT.young)
   await click(adminA, SLOT.builders)
@@ -362,6 +364,7 @@ try {
     && rn.triedToJoin === 0 && rn.playedBefore === false, JSON.stringify([rc.triedToJoin, rn.triedToJoin, rn.playedBefore]))
   w = await openMenu(adminA, '/approve casetest')
   check('/approve with other capitals finds the account that tried to join', /CaseTest/.test(JSON.stringify(adminA.currentWindow?.title ?? '')), JSON.stringify(adminA.currentWindow?.title))
+  check('an account that did try to join gets no never-tried warning', !/Has never tried to join this server/.test(JSON.stringify((adminA.currentWindow?.slots ?? []).slice(0, 54).filter(Boolean))))
   await click(adminA, SLOT.CONFIRM); await sleep(1500)
   const ct = await join('CaseTest').then(() => true, e => e.message)
   check('and then CaseTest can join', ct === true, String(ct))
@@ -487,6 +490,15 @@ try {
     s = new Server(dir); await s.start(); await sleep(1500)
     check('upgrade: a second start never copies again', !s.log.some(l => /Copied plugins\/Stationmaster/.test(l)) && sha(path.join(now, 'config.yml')) === cfgSha)
     rmSync(old, { recursive: true, force: true })
+  }
+
+  // ---------- Stored data ----------
+  console.log('\n# Stored data')
+  {
+    // kids-first.md: "It stores no IP addresses, chat or locations." The bots all came from 127.0.0.1.
+    const stored = ['changes.log', 'join-attempts.json'].map(f => path.join(dir, 'plugins/Usher', f)).filter(existsSync).map(f => readFileSync(f, 'utf8')).join('\n')
+    check('control: there is stored data to look at', stored.length > 100 && /CaseTest|P_young/.test(stored))
+    check('no IP address is stored', !/\b\d{1,3}(\.\d{1,3}){3}\b/.test(stored), (stored.match(/\b\d{1,3}(\.\d{1,3}){3}\b/) || [''])[0])
   }
 
   // ---------- LuckPerms missing ----------
