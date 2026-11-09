@@ -1,4 +1,4 @@
-package com.extantape.stationmaster;
+package com.extantape.usher;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -9,7 +9,6 @@ import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,14 +18,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * /approve &lt;name&gt; and /profile &lt;name&gt; [edit], for admins in the game. Both need stationmaster.approve, so
+ * /approve &lt;name&gt; and /profile &lt;name&gt; [edit], for admins in the game. Both need usher.approve, so
  * players without it don't see them at all.
  */
 final class PlayerCommands {
 
-    private final StationmasterPlugin plugin;
+    private final UsherPlugin plugin;
 
-    PlayerCommands(StationmasterPlugin plugin) { this.plugin = plugin; }
+    PlayerCommands(UsherPlugin plugin) { this.plugin = plugin; }
 
     /** One of the two commands, as Paper's BasicCommand. */
     final class Command implements BasicCommand {
@@ -34,7 +33,7 @@ final class PlayerCommands {
         Command(boolean approve) { this.approve = approve; }
         @Override public void execute(CommandSourceStack source, String[] args) { run(source.getSender(), approve, args); }
         @Override public java.util.Collection<String> suggest(CommandSourceStack source, String[] args) { return complete(source.getSender(), approve, args); }
-        @Override public @Nullable String permission() { return ChangeService.PERMISSION; }
+        @Override public boolean canUse(org.bukkit.command.CommandSender sender) { return ChangeService.mayApprove(sender); }
     }
 
     BasicCommand approve() { return new Command(true); }
@@ -46,7 +45,7 @@ final class PlayerCommands {
     static Component plain(String text) { return Component.text(text, NamedTextColor.GRAY); }
 
     private void run(CommandSender sender, boolean approve, String[] args) {
-        if (!sender.hasPermission(ChangeService.PERMISSION)) {
+        if (!ChangeService.mayApprove(sender)) {
             sender.sendMessage(bad("Only approvers can do that."));
             return;
         }
@@ -56,11 +55,11 @@ final class PlayerCommands {
         }
         boolean edit = approve || args.length == 2;
         if (edit && !(sender instanceof Player)) {
-            sender.sendMessage(plain("The menu is for players. From the console, use: stationmaster apply <request-id> <uuid> <name> +profile -profile"));
+            sender.sendMessage(plain("The menu is for players. From the console, use: usher apply <request-id> <uuid> <name> +profile -profile"));
             return;
         }
-        if (!plugin.settings().ok()) { sender.sendMessage(bad("Stationmaster's config is broken, so it can't change anything right now. " + plugin.settings().problems().get(0))); return; }
-        if (!plugin.store().ready()) { sender.sendMessage(bad("LuckPerms isn't running, so Stationmaster can't change anyone's profiles right now.")); return; }
+        if (!plugin.settings().ok()) { sender.sendMessage(bad("Usher's config is broken, so it can't change anything right now. " + plugin.settings().problems().get(0))); return; }
+        if (!plugin.store().ready()) { sender.sendMessage(bad("LuckPerms isn't running, so Usher can't change anyone's profiles right now.")); return; }
 
         sender.sendMessage(plain("Looking up " + args[0] + "…"));
         resolve(sender, args[0], who -> {
@@ -114,7 +113,7 @@ final class PlayerCommands {
     }
 
     private List<String> complete(CommandSender sender, boolean approve, String[] args) {
-        if (!sender.hasPermission(ChangeService.PERMISSION)) return List.of();
+        if (!ChangeService.mayApprove(sender)) return List.of();
         if (args.length <= 1) {
             String start = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).filter(n -> n.toLowerCase(Locale.ROOT).startsWith(start)).toList();

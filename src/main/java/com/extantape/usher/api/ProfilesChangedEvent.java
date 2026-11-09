@@ -1,4 +1,4 @@
-package com.extantape.stationmaster.api;
+package com.extantape.usher.api;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -10,7 +10,7 @@ import java.util.UUID;
 
 /**
  * Fired on the main thread after a change is saved: someone was approved, or their profiles changed. Listen to it to
- * post to Discord or anywhere else. Stationmaster itself sends nothing over the network.
+ * post to Discord or anywhere else. Usher itself sends nothing over the network.
  */
 public final class ProfilesChangedEvent extends Event {
     private static final HandlerList HANDLERS = new HandlerList();

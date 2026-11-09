@@ -1,1 +1,1 @@
-{ "name": "stationmaster-tests", "private": true, "type": "module", "dependencies": { "mineflayer": "^4.39.0" } }
+{ "name": "usher-tests", "private": true, "type": "module", "dependencies": { "mineflayer": "^4.39.0" } }

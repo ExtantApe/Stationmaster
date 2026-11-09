@@ -1,6 +1,6 @@
-package com.extantape.stationmaster;
+package com.extantape.usher;
 
-import com.extantape.stationmaster.api.JoinAttemptEvent;
+import com.extantape.usher.api.JoinAttemptEvent;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -43,11 +43,11 @@ public final class JoinAttempts implements Listener {
     private static final long EVENT_GAP_MS = 10 * 60 * 1000L;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    private final StationmasterPlugin plugin;
+    private final UsherPlugin plugin;
     private final Path file;
     private final Map<UUID, Attempt> attempts = new LinkedHashMap<>();
 
-    JoinAttempts(StationmasterPlugin plugin, Path file) {
+    JoinAttempts(UsherPlugin plugin, Path file) {
         this.plugin = plugin;
         this.file = file;
         try {

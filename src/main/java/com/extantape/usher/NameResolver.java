@@ -1,4 +1,4 @@
-package com.extantape.stationmaster;
+package com.extantape.usher;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -32,7 +32,7 @@ public final class NameResolver {
     }
 
     private static final Pattern VALID = Pattern.compile("[A-Za-z0-9_]{1,16}");
-    static final String MOJANG = System.getProperty("stationmaster.mojang-url", "https://api.mojang.com/users/profiles/minecraft/");
+    static final String MOJANG = System.getProperty("usher.mojang-url", "https://api.mojang.com/users/profiles/minecraft/");
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     private final Executor async;
@@ -69,7 +69,7 @@ public final class NameResolver {
         HttpResponse<String> response;
         try {
             response = http.send(HttpRequest.newBuilder(URI.create(MOJANG + typed)).timeout(Duration.ofSeconds(10))
-                    .header("User-Agent", "Stationmaster").GET().build(), HttpResponse.BodyHandlers.ofString());
+                    .header("User-Agent", "Usher").GET().build(), HttpResponse.BodyHandlers.ofString());
         } catch (Exception e) {
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             throw new NameProblem("lookup_failed", "Couldn't reach Mojang to look up " + typed + ". Nothing was changed. Try again in a minute.");

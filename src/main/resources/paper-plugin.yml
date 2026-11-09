@@ -1,17 +1,20 @@
-name: Stationmaster
+name: Usher
 version: '${version}'
-main: com.extantape.stationmaster.StationmasterPlugin
+main: com.extantape.usher.UsherPlugin
 api-version: '26.1'
 description: Approve new players and choose their profiles, without typing LuckPerms commands.
-website: https://github.com/ExtantApe/Stationmaster
+website: https://github.com/ExtantApe/Usher
 dependencies:
   server:
-    # Optional on purpose: without LuckPerms, Stationmaster still loads and refuses every change, saying why.
+    # Optional on purpose: without LuckPerms, Usher still loads and refuses every change, saying why.
     LuckPerms:
       load: BEFORE
       required: false
       join-classpath: true
 permissions:
-  stationmaster.approve:
+  usher.approve:
     description: Approve people and change their profiles, by command or menu. Nobody can use it on themselves.
+    default: false
+  stationmaster.approve:
+    description: The old name for usher.approve, from before the rename. Still works in 0.3.x and is removed in the next release; grant usher.approve instead.
     default: false
