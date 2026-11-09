@@ -59,6 +59,7 @@ public final class UsherPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(attempts, this);
         getServer().getPluginManager().registerEvents(access, this);
         getServer().getPluginManager().registerEvents(menus, this);
+        LatchkeyHook.register(this);
 
         PlayerCommands players = new PlayerCommands(this);
         ConsoleCommands console = new ConsoleCommands(this);

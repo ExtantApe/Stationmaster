@@ -11,6 +11,11 @@ dependencies:
       load: BEFORE
       required: false
       join-classpath: true
+    # Optional: with Latchkey, Usher checks an invite's profiles when it's made and applies them when it's used.
+    # Usher reads Latchkey's events by name, so it builds and runs without it.
+    Latchkey:
+      load: BEFORE
+      required: false
 permissions:
   usher.approve:
     description: Approve people and change their profiles, by command or menu. Nobody can use it on themselves.
