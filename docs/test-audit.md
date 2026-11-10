@@ -2,6 +2,26 @@
 
 Kept by this repo's owning session (Minecraft: Plugins Lead), per `~/Code/CLAUDE.md`, "Test self-audits". Newest first.
 
+## 2026-11-10: after 0.3.1, 0.4.0 and 0.4.1
+
+What changed since the first audit: profiles on Latchkey invites (0.3.1), the console on Signalbox format 1 with `describe` and the Stationmaster names removed (0.4.0), and attempts in pages (0.4.1). The first audit's table still holds, except its last row: the old names are gone, as 0.3.x said they would be.
+
+| Promise | Covered by |
+| --- | --- |
+| A Latchkey invite's profiles are checked when it's made: unknown and admin-granting profiles refused, a second circle asked as a question, only its own yes answers it | unit `LatchkeyHookTest` (8 tests); live in Latchkey's own bot test, which runs with Usher |
+| **A profile that turns unsafe between the invite and its use isn't applied, and the log says so** | **new**, live in Latchkey's bot test ("a profile made unsafe after the invite is not applied when it's used"). Usher re-checks through the same `ChangeService` as every other change |
+| Without LuckPerms, no invite profile is allowed | unit `withoutLuckPermsNothingIsAllowed` |
+| One answer line per console request, format 1, with stable codes (`unknown-command`, `bad-argument`, a bad id) | unit `ConsoleCommandsTest`; live "an unknown command still gets one answer", "bad arguments answer bad-argument", "a bad request id is answered in plain words" |
+| `describe` lists every command and marks only the optional arguments | unit `describeListsEveryCommand`, `describeMarksTheOptionalArgumentsAndOnlyThose`; live |
+| Attempts come in pages; a cursor Usher didn't hand out is refused | unit `cursorsAreOnlyOnesUsherHandedOut`; live "the list pages the spec's way" |
+| "none" can't be a profile name, since it means "no profiles" | unit `SettingsTest`, `ConsoleCommandsTest` |
+| **Console commands stay console-only, even for an approver** | **new** live "an approver typing a console command in game is refused, and told what to use", "and P_build is unchanged" |
+| The old `stationmaster.*` nodes no longer let anyone approve | live "the old node stationmaster.approve no longer lets anyone approve" |
+
+**Gaps added this audit:** the two in bold. The bot test passed 123/123 on Paper 26.1.2. The changes don't depend on the version, so it wasn't rerun on 26.2 and 26.3, where 0.4.1 passed 121/121.
+
+**Skipped, with reasons:** the same as the first audit.
+
 ## 2026-11-09: first full audit (at 0.3.0)
 
 Usher adds people to kids' groups, so the promises in `docs/kids-first.md` come first. "Live" is `test/acceptance.mjs` on throwaway Paper servers with bots and LuckPerms; "unit" is `src/test`.
