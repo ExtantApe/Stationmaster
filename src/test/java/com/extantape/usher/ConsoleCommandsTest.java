@@ -63,6 +63,12 @@ class ConsoleCommandsTest {
         assertTrue(line.contains("{\"name\":\"limit\",\"type\":\"int\",\"optional\":true}"));
     }
 
+    @Test void cursorsAreOnlyOnesUsherHandedOut() throws Exception {
+        assertEquals(50, ConsoleCommands.cursorOf("50"));
+        assertEquals(0, ConsoleCommands.cursorOf("0"));
+        for (String bad : List.of("-1", "abc", "1.5", "9999999999")) assertThrows(ConsoleCommands.Refusal.class, () -> ConsoleCommands.cursorOf(bad), bad);
+    }
+
     @Test void describeListsEveryCommand() {
         var names = ConsoleCommands.described().stream().map(d -> d.name()).toList();
         assertEquals(ConsoleCommands.SUBS, names);

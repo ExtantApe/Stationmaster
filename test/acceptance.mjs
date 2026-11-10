@@ -127,8 +127,9 @@ try {
   check('control: a stranger is turned away by the whitelist', kicked)
   await join('Stranger1').catch(() => {})
   const att = await s.sm('attempts')
-  const st1 = att.attempts.find(a => a.name === 'Stranger1')
-  check('the attempt is listed for Leaf Juice, with a count and no duplicate', st1 && st1.attempts === 2 && att.attempts.filter(a => a.name === 'Stranger1').length === 1, JSON.stringify(att.attempts))
+  const st1 = att.items.find(a => a.name === 'Stranger1')
+  check('the attempt is listed for Leaf Juice, with a count and no duplicate', st1 && st1.attempts === 2 && att.items.filter(a => a.name === 'Stranger1').length === 1, JSON.stringify(att.items))
+  check('the list pages the spec\'s way: items, and next as a string cursor or null', Array.isArray(att.raw.items) && 'next' in att.raw && (att.raw.next === null || typeof att.raw.next === 'string'), JSON.stringify(att.raw).slice(0, 120))
   check('a JoinAttemptEvent fired once, on the main thread, despite two tries', spy(from, /SPY attempt name=Stranger1 .*main=true/).length === 1, spy(from, /attempt/).join(' | '))
 
   // ---------- Approving with each single profile, with several and with none ----------
@@ -380,7 +381,7 @@ try {
   await click(adminA, SLOT.CONFIRM); await sleep(1500)
   const ct = await join('CaseTest').then(() => true, e => e.message)
   check('and then CaseTest can join', ct === true, String(ct))
-  check('approving removes them from the attempts list', !(await s.sm('attempts')).attempts.some(a => a.name === 'CaseTest'))
+  check('approving removes them from the attempts list', !(await s.sm('attempts')).items.some(a => a.name === 'CaseTest'))
   adminA.chat_log.length = 0
   adminA.chat('/approve bad-name!'); adminA.chat('/approve way_too_long_for_a_name'); await sleep(1500)
   check('impossible names fail clearly', adminA.chat_log.filter(m => /can't be a Minecraft name/.test(m)).length === 2, adminA.chat_log.join(' | '))
@@ -396,7 +397,7 @@ try {
   await s.stop(); await sleep(1500)
   s = new Server(dir); await s.start()
   check('profiles survive a restart', same(await profilesOf('P_two'), ['young', 'young_sky', 'builders']) && same(await profilesOf('P_several'), ['young', 'builders', 'young_sky']))
-  check('the attempts list survives a restart', (await s.sm('attempts')).attempts.some(a => a.name === 'Stranger2'))
+  check('the attempts list survives a restart', (await s.sm('attempts')).items.some(a => a.name === 'Stranger2'))
   const after2 = await join('P_several')
   check('and the worlds are still right after it', same(await openWorlds(after2), expected(['young', 'builders', 'young_sky'])))
   await quit(after2)

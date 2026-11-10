@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.extantape"
-version = "0.4.0"
+version = "0.4.1"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(25))
@@ -22,7 +22,7 @@ val luckPermsApi = "net.luckperms:api:5.4"
 dependencies {
     compileOnly(paperApi)
     compileOnly(luckPermsApi)
-    implementation("com.github.ExtantApe:Signalbox:v0.2.0")
+    implementation("com.github.ExtantApe:Signalbox:v0.3.0")
 
     testImplementation(paperApi)
     testImplementation(luckPermsApi)
