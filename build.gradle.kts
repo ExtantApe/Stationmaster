@@ -1,9 +1,10 @@
 plugins {
     java
+    id("com.gradleup.shadow") version "9.6.1"
 }
 
 group = "com.extantape"
-version = "0.3.1"
+version = "0.4.0"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(25))
@@ -12,6 +13,7 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://jitpack.io")
 }
 
 val paperApi = "io.papermc.paper:paper-api:26.1.2.build.74-stable"
@@ -20,6 +22,7 @@ val luckPermsApi = "net.luckperms:api:5.4"
 dependencies {
     compileOnly(paperApi)
     compileOnly(luckPermsApi)
+    implementation("com.github.ExtantApe:Signalbox:v0.2.0")
 
     testImplementation(paperApi)
     testImplementation(luckPermsApi)
@@ -44,10 +47,16 @@ tasks.test {
     useJUnitPlatform()
 }
 
-tasks.jar {
+// Signalbox goes inside the jar, relocated, so it can never clash with another plugin's copy. The shaded jar is the
+// only one built, so the release workflow's Usher-*.jar finds exactly one.
+tasks.shadowJar {
     archiveBaseName.set("Usher")
+    archiveClassifier.set("")
     from("LICENSE")
+    relocate("com.extantape.signalbox", "com.extantape.usher.libs.signalbox")
 }
+tasks.jar { enabled = false }
+tasks.assemble { dependsOn(tasks.shadowJar) }
 
 // Test only: a tiny plugin that logs Usher's events, for the bot tests in test/. Never shipped.
 val spy: SourceSet = sourceSets.create("spy") {

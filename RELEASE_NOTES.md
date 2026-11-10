@@ -1,22 +1,36 @@
-# Usher 0.3.1
+# Usher 0.4.0
 
-Usher now works with Latchkey 0.2.0's invites. Nothing else changes, and Usher still runs the same without Latchkey.
+Usher's console commands move to the shared Signalbox format, so Leaf Juice and scripts talk to Usher the same way as to Latchkey. The old Stationmaster names are gone, as 0.3.x said they would be.
 
 This is an early 0.x release. It has passed bot tests on throwaway servers, but it hasn't been used on a real server or seen in a real game client.
 
-## New: profiles on Latchkey invites
+## Changed
 
-- **When an admin makes an invite that names profiles,** Usher checks them straight away with its usual rules. Unknown or restricted profiles are refused, so a bad invite is never made. Anything that needs a yes, such as joining two chat circles or a profile with a `confirm` question, comes back as a question. The admin answers it with `--yes` on the same command.
-- **When the invite is used,** Usher applies the profiles through the same path as any approval, with the yeses given when the invite was made. The change log records it as "Latchkey invite". If something has changed since, nothing is applied and the server log says why.
-- **An invite with no profiles** gives lobby-only access until an admin adds more.
-- Usher doesn't need Latchkey to build or run. It finds Latchkey's events by name when Latchkey is installed.
+- **Console commands use [Signalbox](https://github.com/ExtantApe/Signalbox) format 1.**
+  - A person types `usher <command> …` and gets plain words.
+  - A tool adds `--json <id>` and gets exactly one line back, `ea-result <id> <json>`.
+  - Questions that need a yes come back as `needs` and change nothing; answer them with `--yes`, such as `--yes bridge`.
+  - `describe` lists every command with its typed arguments, marking the optional ones.
+  - The README's "Console commands" section has the full list.
+- **`apply` takes plain positional arguments:** `apply <uuid> <name> <add|none> <remove|none> [whitelist] [via]`, with profile lists comma-separated. The old `+profile`, `-profile`, `confirm=`, `whitelist=` and `via=` forms are gone.
+- **The request id is the `--json` id** and still makes a change safe to resend: it's applied once and answered again with `replayed: true`.
+- **Error codes use dashes:** `unknown-profile`, `luckperms-missing` and so on.
+- **A profile can't be called `none`,** since commands use `none` for an empty list. A config that has one leaves that profile out and says why.
 
-## Upgrading from 0.3.0
+## Removed
 
-Swap the jar with the server stopped. Nothing else changes. The old names from Stationmaster (`stationmaster.approve`, the `stationmaster` and `smaster` commands) still work in 0.3.x, as promised, and go in the next release.
+- `usher-result` lines. Nothing published read them.
+- The `stationmaster` and `smaster` commands, and the `stationmaster.approve` permission. Grant `usher.approve` instead: `lp group <group> permission set usher.approve true`.
+
+## Upgrading from 0.3.x
+
+- Swap the jar with the server stopped.
+- If anything still grants `stationmaster.approve`, grant `usher.approve` too, or that admin can no longer approve.
+- Scripts that call `usher` need the new form.
+- The old `plugins/Stationmaster/` folder is still copied across on first start if `plugins/Usher/` doesn't exist.
 
 ## Tested
 
-- 43 unit tests pass, including 9 new ones for the invite checks.
-- Latchkey's bot test runs this code with Latchkey 0.2.0 on throwaway Paper 26.1.2, 26.2 and 26.3 servers, and passes 38/38 on each. It covers a refused profile, a question answered with `--yes`, and both profiles applied when the invite is used.
+- 50 unit tests pass, including the argument rules for `apply`, the reserved `none` and the optional markers in `describe`.
+- The bot suite drives every console command in the new format and passes 120/120 on throwaway Paper 26.1.2, 26.2 and 26.3 servers. It covers the raw `ea-result` line, `unknown-command` and `bad-argument` answers, `describe`, questions answered with `--yes`, resending an id, a kill -9 mid-change, and the old Stationmaster names being gone.
 - Not tested yet: a real server or client.

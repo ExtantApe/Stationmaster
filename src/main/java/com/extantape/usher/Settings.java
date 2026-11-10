@@ -63,6 +63,8 @@ public record Settings(boolean ok, String lobbyWorld, Lookup lookup, Set<String>
             ConfigurationSection p = section.getConfigurationSection(key);
             if (p == null) { problems.add("Profile " + key + " isn't a section, so it's left out."); continue; }
             if (!ID.matcher(id).matches()) { problems.add("Profile " + key + " needs an id of letters, digits, - or _, so it's left out."); continue; }
+            // "none" stands for an empty list in commands (usher apply, latchkey invite create), so it can't be a profile.
+            if (id.equals("none")) { problems.add("Profile none can't be called that: \"none\" means no profiles in commands. Rename it; it's left out."); continue; }
             String group = p.getString("group", "").trim().toLowerCase(Locale.ROOT);
             if (!GROUP.matcher(group).matches()) { problems.add("Profile " + id + " has no usable group, so it's left out."); continue; }
             if (restricted.contains(group)) { problems.add("Profile " + id + " uses the restricted group " + group + ", so it's refused."); continue; }

@@ -105,8 +105,20 @@ try {
     && prof.profiles.find(p => p.id === 'grown_sky')?.confirm && prof.profiles.find(p => p.id === 'young')?.circle === 'young', JSON.stringify(prof).slice(0, 200))
   check('every request gets exactly one result line', prof.hits === 1)
   check('restricted groups are listed', same(prof.restricted, ['admin', 'owner', 'moderator']))
-  const badReq = (await s.ask('usher apply has!bad x y', 800)).join(' ')
-  check('a bad request ID is answered with an error line, not silence', /usher-result - .*bad_request/.test(badReq))
+  const badReq = (await s.ask('usher profiles --json Has!Bad', 800)).join(' ')
+  check('a bad request id is answered in plain words, not silence', /request id must be/i.test(badReq), badReq.slice(0, 160))
+  // The 0.4.0 format itself: one Signalbox line, straight after the log header, with dashed codes.
+  check('answers are Signalbox lines: ea-result <id> {"id":…,"ok":…}', /\]: ea-result t[\w-]+ \{"id":"t[\w-]+","ok":true/.test(prof.line), prof.line.slice(0, 120))
+  const unknownSub = await s.sm('frobnicate')
+  check('an unknown command still gets one answer, with code unknown-command', unknownSub.raw.error?.code === 'unknown-command' && unknownSub.hits === 1)
+  // Sent as typed, without the helper, which would fill in the missing arguments.
+  const badArgFrom = s.log.length
+  s.send('usher apply 00000000-0000-0000-0000-00000000000a --json badarg-1')
+  const badArgLine = await s.waitFor(/\]: ea-result badarg-1 /, 15000, badArgFrom)
+  const badArg = { raw: JSON.parse(badArgLine.slice(badArgLine.indexOf('{'))) }
+  check('bad arguments answer bad-argument, with how to use it', badArg.raw.error?.code === 'bad-argument' && /usher apply <uuid>/.test(badArg.raw.error.message))
+  const desc = await s.sm('describe')
+  check('describe lists every command, format 1', desc.raw.format === 1 && ['profiles', 'resolve', 'show', 'apply', 'attempts', 'log', 'reload', 'describe'].every(n => desc.raw.commands.some(c => c.name === n)), JSON.stringify(desc.raw).slice(0, 160))
 
   // ---------- Strangers ----------
   console.log('\n# Strangers stay out, and are remembered')
@@ -173,7 +185,7 @@ try {
   let opened = false
   const onOpen = () => { opened = true }
   pleb.on('windowOpen', onOpen)
-  for (const c of ['/approve Someone', '/profile P_build', '/profile P_build edit', '/usher apply x 00000000-0000-0000-0000-000000000000 Someone +young', '/usher reload', '/smaster profiles x']) {
+  for (const c of ['/approve Someone', '/profile P_build', '/profile P_build edit', '/usher apply 00000000-0000-0000-0000-000000000000 Someone young none', '/usher reload', '/usher profiles --json x1']) {
     pleb.chat(c); await sleep(700)
   }
   pleb.removeListener('windowOpen', onOpen)
@@ -409,7 +421,7 @@ try {
     await s.stop(); await sleep(1000)
     s = new Server(dir, { props: [`-Dusher.test.${prop}=15000`] }); await s.start()
     const name = prop === 'pause-after-groups' ? 'P_kill1' : 'P_kill2'
-    s.send(`usher apply k-${name} ${offlineUuid(name)} ${name} +builders`)
+    s.send(`usher apply ${offlineUuid(name)} ${name} builders none --json k-${name.toLowerCase().replace('_', '-')}`)
     const end = Date.now() + 10000
     while (Date.now() < end && !changesLog().some(e => e.event === 'started' && e.target === name)) await sleep(100)
     await sleep(prop === 'pause-after-groups' ? 3000 : 500)
@@ -444,7 +456,7 @@ try {
   check('control: once LuckPerms can save again, the same change works', (await s.sm('apply', offlineUuid('P_lpfail'), 'P_lpfail', '+builders')).status === 'ok')
   }
 
-  // ---------- Rename from Stationmaster (0.3.x keeps the old names for one release) ----------
+  // ---------- Rename from Stationmaster (the old names went in 0.4.0; the folder still comes across) ----------
   console.log('\n# The rename from Stationmaster')
   {
     await s.ask('whitelist add OldNode', 400)
@@ -459,18 +471,15 @@ try {
     await sleep(500)
     const opened = await openMenu(oldBot, '/profile P_young edit').then(() => true, () => false)
     if (oldBot.currentWindow) oldBot.closeWindow(oldBot.currentWindow)
-    check('the old node stationmaster.approve still lets someone approve', opened)
-    check('and the log says to move to usher.approve', s.log.slice(from).some(l => /OldNode approves through the old permission stationmaster\.approve.*usher\.approve/.test(l)))
+    check('the old node stationmaster.approve no longer lets anyone approve (gone in 0.4.0, as 0.3.x said)', !opened)
     await s.ask('lp user OldNode permission unset stationmaster.approve', 800)
     await quit(oldBot)
     for (const old of ['stationmaster', 'smaster']) {
-      from = s.log.length
       const r = (await s.ask(old + ' reload', 1500)).join(' ')
-      check(`"${old} reload" still works`, /Reloaded: 5 profiles/.test(r), r.slice(0, 160))
-      check(`"${old}" logs that it's the old name`, s.log.slice(from).some(l => /old names for "usher"/.test(l)))
+      check(`"${old}" is gone`, /Unknown or incomplete command|Unknown command/i.test(r) && !/Reloaded/.test(r), r.slice(0, 160))
     }
     const r = await s.sm('profiles')
-    check('the console result line is now usher-result', r.status === 'ok' && r.hits === 1)
+    check('the console answer line is ea-result, and usher-result is gone', r.status === 'ok' && r.hits === 1 && !s.log.some(l => /usher-result /.test(l)))
 
     // A server upgrading from Stationmaster: only plugins/Stationmaster exists.
     await s.stop(); await sleep(1000)

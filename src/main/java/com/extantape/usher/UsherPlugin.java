@@ -32,7 +32,6 @@ public final class UsherPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        ChangeService.log = getLogger();
         migrateFromStationmaster();
         saveDefaultConfig();
         settings = readSettings();
@@ -68,8 +67,6 @@ public final class UsherPlugin extends JavaPlugin {
             commands.register("approve", "Let someone in and choose their profiles.", players.approve());
             commands.register("profile", "See or change someone's profiles.", players.profile());
             commands.register("usher", "Console commands for Leaf Juice and scripts, and reload.", console);
-            // The old names, for one release (0.3.x) after the rename. Each use logs where to move.
-            commands.register("stationmaster", "Old name for /usher. Goes in the next release.", List.of("smaster"), deprecated(console));
         });
 
         // After startup, so listeners from other plugins hear about problems.
@@ -219,17 +216,6 @@ public final class UsherPlugin extends JavaPlugin {
     NameResolver names() { return names; }
     PickerMenus menus() { return menus; }
 
-    /** Wraps the console command so the old names keep working for one release, with a nudge in the log. */
-    private io.papermc.paper.command.brigadier.BasicCommand deprecated(ConsoleCommands console) {
-        return new io.papermc.paper.command.brigadier.BasicCommand() {
-            @Override public void execute(io.papermc.paper.command.brigadier.CommandSourceStack source, String[] args) {
-                getLogger().warning("\"stationmaster\" and \"smaster\" are the old names for \"usher\". They still work in 0.3.x but go in the next release.");
-                console.execute(source, args);
-            }
-            @Override public java.util.Collection<String> suggest(io.papermc.paper.command.brigadier.CommandSourceStack source, String[] args) { return console.suggest(source, args); }
-            @Override public boolean canUse(org.bukkit.command.CommandSender sender) { return console.canUse(sender); }
-        };
-    }
 
     /**
      * The plugin was called Stationmaster before 0.3.0. If plugins/Usher doesn't exist yet and plugins/Stationmaster
