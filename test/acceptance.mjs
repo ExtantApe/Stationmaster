@@ -213,6 +213,11 @@ try {
   adminA.chat_log.length = 0
   adminA.chat('/profile AdminA'); await sleep(1500)
   check('viewing your own profiles is fine', adminA.chat_log.some(m => /AdminA is approved/.test(m)), adminA.chat_log.join(' | '))
+  // Console commands stay console-only, even for an approver: in game, changes go through the menu and its warnings.
+  adminA.chat_log.length = 0
+  adminA.chat('/usher apply ' + offlineUuid('P_build') + ' P_build builders,young'); await sleep(1500)
+  check('an approver typing a console command in game is refused, and told what to use', adminA.chat_log.some(m => /console commands/.test(m)), adminA.chat_log.join(' | '))
+  check('and P_build is unchanged', same(await profilesOf('P_build'), ['builders']))
 
   // ---------- The menu ----------
   console.log('\n# The menu')
