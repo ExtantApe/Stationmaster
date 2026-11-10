@@ -59,7 +59,7 @@ final class ConsoleCommands implements BasicCommand {
             new Describe.Command("apply", "console", List.of(Describe.Arg.of("uuid", "uuid"), Describe.Arg.of("name", "player"),
                 Describe.Arg.listOf("add", "string", List.of("none")), Describe.Arg.listOf("remove", "string", List.of("none")),
                 Describe.Arg.of("whitelist", "bool").asOptional(), Describe.Arg.of("via", "string").asOptional()), List.of("confirm-<profile>", "bridge"), false),
-            new Describe.Command("attempts", "console", List.of(Describe.Arg.of("limit", "int").asOptional(), Describe.Arg.of("cursor", "int").asOptional()), List.of(), false),
+            new Describe.Command("attempts", "console", List.of(Describe.Arg.of("limit", "int").asOptional(), Describe.Arg.of("cursor", "string").asOptional()), List.of(), false),
             new Describe.Command("log", "console", List.of(Describe.Arg.of("limit", "int").asOptional()), List.of(), false),
             new Describe.Command("reload", a, List.of(), List.of(), false),
             new Describe.Command("describe", "console", List.of(), List.of(), false));
@@ -291,7 +291,8 @@ final class ConsoleCommands implements BasicCommand {
 
     private void attempts(CommandSender sender, Request r, List<String> rest) throws Request.Bad, Refusal {
         if (rest.size() > 2) throw new Refusal(Errors.BAD_ARGUMENT, "Use: usher attempts [limit] [cursor]");
-        int limit = rest.isEmpty() ? 50 : Args.integer(rest.get(0)), cursor = rest.size() < 2 ? 0 : Args.integer(rest.get(1));
+        int limit = rest.isEmpty() ? 50 : Args.integer(rest.get(0));
+        int cursor = rest.size() < 2 ? 0 : cursorOf(rest.get(1));
         if (limit < 1 || limit > MAX_LIMIT || cursor < 0) throw new Refusal(Errors.BAD_ARGUMENT, "limit is 1 to " + MAX_LIMIT + " and cursor 0 or more.");
         List<JoinAttempts.Attempt> all = new ArrayList<>(plugin.attempts().list());
         List<JoinAttempts.Attempt> page = all.subList(Math.min(cursor, all.size()), Math.min(cursor + limit, all.size()));
@@ -310,10 +311,8 @@ final class ConsoleCommands implements BasicCommand {
             j.put("last", a.last);
             list.add(j);
         }
-        Map<String, Object> o = new LinkedHashMap<>();
-        o.put("attempts", list);
-        o.put("next", cursor + page.size() < all.size() ? cursor + page.size() : null);
-        send(sender, Answer.ok(r.id(), o));
+        // The spec's list shape: items, and next as an opaque string cursor, null on the last page.
+        send(sender, Answer.page(r.id(), list, cursor + page.size() < all.size() ? Integer.toString(cursor + page.size()) : null));
     }
 
     private void log(CommandSender sender, Request r, List<String> rest) throws Request.Bad, Refusal {
@@ -334,6 +333,12 @@ final class ConsoleCommands implements BasicCommand {
     }
 
     // --- helpers ---
+
+    /** The cursor a page handed out: a string to the caller, a position here. Anything else is refused. */
+    static int cursorOf(String token) throws Refusal {
+        if (!token.matches("\\d{1,9}")) throw new Refusal(Errors.BAD_ARGUMENT, "That cursor isn't one Usher handed out. Use the next value from the last page.");
+        return Integer.parseInt(token);
+    }
 
     private void send(CommandSender sender, String line) { plugin.runMain(() -> Answer.send(sender::sendMessage, line)); }
 
