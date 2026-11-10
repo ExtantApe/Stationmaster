@@ -129,23 +129,21 @@ export class Server {
     await sleep(ms)
     return this.log.slice(from).map(strip)
   }
-  /** Runs a usher console command and returns its parsed result line. */
-  async sm(sub, ...args) {
-    const req = 't' + (++Server.req)
-    const from = this.log.length
-    this.send(['usher', sub, req, ...args].join(' '))
-    const line = await this.waitFor(new RegExp('usher-result ' + req + ' '), 30000, from)
-    const json = strip(line).slice(strip(line).indexOf('{'))
-    const hits = this.log.slice(from).filter(l => l.includes('usher-result ' + req + ' ')).length
-    return { req, hits, ...JSON.parse(json) }
-  }
-  /** Same, with a request ID chosen by the caller, for replays. */
+  /**
+   * Runs a usher console command in the Signalbox format (0.4.0: `usher <sub> <args> [--yes ids] --json <id>`) and
+   * returns the answer, mapped back to the fields the checks read: status (ok, warn, refused, error), code with
+   * underscores, message, and warnings for questions. The raw line and answer stay on .line and .raw.
+   * Arguments may use the old shorthand (+profile, -profile, confirm=, whitelist=, via=); they're translated here.
+   */
+  async sm(sub, ...args) { return this.smAs('t' + (++Server.req) + '-' + Math.random().toString(36).slice(2, 6), sub, ...args) }
+  /** Same, with a request id chosen by the caller, for replays. */
   async smAs(req, sub, ...args) {
     const from = this.log.length
-    this.send(['usher', sub, req, ...args].join(' '))
-    await sleep(300)
-    const line = await this.waitFor(new RegExp('usher-result ' + req.replace(/[.]/g, '\\.') + ' '), 30000, from)
-    return JSON.parse(strip(line).slice(strip(line).indexOf('{')))
+    this.send(['usher', sub, ...toSignalbox(sub, args), '--json', req].join(' '))
+    const line = await this.waitFor(new RegExp('\\]: ea-result ' + req.replace(/[.]/g, '\\.') + ' '), 30000, from)
+    const hits = this.log.slice(from).filter(l => l.includes('ea-result ' + req + ' ')).length
+    const raw = JSON.parse(line.slice(line.indexOf('{')))
+    return { req, hits, line, raw, ...fromSignalbox(raw) }
   }
   errors() { return this.log.filter(l => /Usher/.test(l) && /(ERROR|Exception|SEVERE)/.test(l)) }
   async stop() {
@@ -156,6 +154,35 @@ export class Server {
   kill9() { this.proc.kill('SIGKILL'); return this.exited }
 }
 Server.req = 0
+
+/** The old apply shorthand as 0.4.0's positional form: <uuid> <name> <add|none> <remove|none> [whitelist] [via], --yes. */
+function toSignalbox(sub, args) {
+  if (sub !== 'apply') return args
+  const [uuid, name, ...rest] = args
+  const add = [], remove = [], yes = []
+  let whitelist = 'true', via = null
+  for (const a of rest) {
+    if (a.startsWith('+')) add.push(a.slice(1))
+    else if (a.startsWith('-')) remove.push(a.slice(1))
+    else if (a.startsWith('confirm=')) for (const c of a.slice(8).split(',')) yes.push(c.replace(':', '-').replaceAll('_', '-'))
+    else if (a === 'whitelist=no') whitelist = 'false'
+    else if (a === 'whitelist=yes') whitelist = 'true'
+    else if (a.startsWith('via=')) via = a.slice(4)
+    else throw new Error('test: unknown apply argument ' + a)
+  }
+  const out = [uuid, name, add.join(',') || 'none', remove.join(',') || 'none', whitelist, ...(via ? [via] : [])]
+  return yes.length ? [...out, '--yes', yes.join(',')] : out
+}
+
+// Codes Usher answers as "error" (something failed) rather than "refused" (a rule said no).
+const ERRORS = new Set(['luckperms_failed', 'internal', 'log_failed', 'server_busy', 'whitelist_failed', 'busy'])
+/** A Signalbox answer in the shape the checks were written for. */
+function fromSignalbox(raw) {
+  if (raw.ok) return { ...raw, status: raw.status ?? 'ok' }
+  if (raw.needs) return { status: 'warn', code: 'needs_confirmation', warnings: raw.needs.map(q => ({ code: q.id === 'bridge' ? 'bridge' : 'confirm:' + q.id.replace(/^confirm-/, '').replaceAll('-', '_'), text: q.question })) }
+  const code = raw.error.code.replaceAll('-', '_')
+  return { status: ERRORS.has(code) ? 'error' : 'refused', code, message: raw.error.message }
+}
 const strip = l => l.replace(/^\[[\d:]+ \w+\]: /, '').replace(/^\[[\d:]+\] \[[^\]]+\/\w+\]: /, '')
 
 /** A bot that keeps its chat. Rejects with the kick reason if it can't join. */

@@ -31,19 +31,10 @@ import java.util.logging.Level;
 public final class ChangeService {
 
     public static final String PERMISSION = "usher.approve";
-    /** The node from before the rename (2026-11-09). Honoured for one release (0.3.x), then removed. */
-    public static final String OLD_PERMISSION = "stationmaster.approve";
-    private static final java.util.Set<String> warnedOld = java.util.concurrent.ConcurrentHashMap.newKeySet();
-    static volatile java.util.logging.Logger log;
 
-    /** True for approvers. Accepts the old node too, for one release, and logs once per name that it should move. */
+    /** True for approvers. The old Stationmaster node stopped working in 0.4.0, as 0.3.x said it would. */
     public static boolean mayApprove(org.bukkit.permissions.Permissible who) {
-        if (who.hasPermission(PERMISSION)) return true;
-        if (!who.hasPermission(OLD_PERMISSION)) return false;
-        String name = who instanceof org.bukkit.command.CommandSender cs ? cs.getName() : String.valueOf(who);
-        if (warnedOld.add(name) && log != null)
-            log.warning(name + " approves through the old permission " + OLD_PERMISSION + ". It still works in 0.3.x but goes in the next release: grant " + PERMISSION + " instead.");
-        return true;
+        return who.hasPermission(PERMISSION);
     }
 
     /** Who asked. {@code uuid} is null for the console. {@code via} is menu, console or leaf-juice. */

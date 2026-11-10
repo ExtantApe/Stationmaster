@@ -95,4 +95,12 @@ class SettingsTest {
         assertEquals(16, s.profiles().size(), "they still load");
         assertTrue(s.problems().stream().anyMatch(p -> p.startsWith("2 main profiles don't fit")), String.valueOf(s.problems()));
     }
+
+    @Test
+    void aProfileCantBeCalledNoneSinceCommandsUseItForAnEmptyList() throws Exception {
+        Settings s = Settings.parse(defaults().replace("  builders:\n", "  none:\n"));
+        assertFalse(s.profiles().containsKey("none"), "left out");
+        assertTrue(s.problems().stream().anyMatch(p -> p.contains("Profile none can't be called that")), String.valueOf(s.problems()));
+        assertTrue(s.profiles().containsKey("young"), "the other profiles still load");
+    }
 }

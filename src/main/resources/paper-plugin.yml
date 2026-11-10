@@ -20,6 +20,3 @@ permissions:
   usher.approve:
     description: Approve people and change their profiles, by command or menu. Nobody can use it on themselves.
     default: false
-  stationmaster.approve:
-    description: The old name for usher.approve, from before the rename. Still works in 0.3.x and is removed in the next release; grant usher.approve instead.
-    default: false

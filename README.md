@@ -88,8 +88,8 @@ Usher was called Stationmaster up to 0.2.1. It was renamed in 0.3.0; nothing els
 
 - Remove `Stationmaster-0.2.1.jar` and add `Usher-0.3.0.jar`, with the server stopped.
 - On its first start, Usher copies `plugins/Stationmaster/` to `plugins/Usher/` if `plugins/Usher/` doesn't exist yet: your config, `changes.log` and `join-attempts.json` come across unchanged. The old folder is left as it was; delete it once you're happy. If `plugins/Usher/` already exists, nothing is copied.
-- For 0.3.x only, the old names still work and log a line saying what to change: the permission `stationmaster.approve` and the console command `stationmaster` (also `smaster`). Both go in the next release. Grant `usher.approve` instead: `lp group <group> permission set usher.approve true`.
-- The console result line is now `usher-result`, and the API package is `com.extantape.usher.api` (`UsherProblemEvent` was `StationmasterProblemEvent`). Nothing published used the old ones.
+- The old names went in 0.4.0, as 0.3.x said: the permission `stationmaster.approve` and the console command `stationmaster` (also `smaster`) no longer work. Grant `usher.approve` instead: `lp group <group> permission set usher.approve true`.
+- The API package is `com.extantape.usher.api` (`UsherProblemEvent` was `StationmasterProblemEvent`).
 
 ## Commands
 
@@ -99,34 +99,40 @@ Usher was called Stationmaster up to 0.2.1. It was renamed in 0.3.0; nothing els
 | `/profile <name>` | approvers, console | Shows someone's profiles, with a button to change them. |
 | `/profile <name> edit` | approvers | Opens the menu to change their profiles. |
 | `/usher reload` | approvers, console | Re-reads `config.yml`. |
-| `usher <command> <request-id> …` | console | The commands below, for Leaf Juice and scripts. |
+| `usher <command> …` | console | The commands below, for Leaf Juice, scripts and people. |
 
 Approvers need `usher.approve`. It's `false` by default, operators included.
 
 ## Console commands
 
-Each takes a request ID you choose (1 to 64 letters, digits, `.`, `_`, `:` or `-`). Each answers with exactly one line, `usher-result <request-id> <json>`, sometimes a moment later. Every answer has `status` (`ok`, `warn`, `refused` or `error`), `code` and a `message` that's fine to show a person.
+They use the shared [Signalbox](https://github.com/ExtantApe/Signalbox) format. A person types them as they are and gets an answer in plain words. A tool adds `--json <id>` at the end, with an id it chooses (1 to 36 of `a-z`, `0-9` and `-`), and gets exactly one line back, `ea-result <id> <json>`, sometimes a moment later:
+
+- done: `{"id":…,"ok":true, …fields}`
+- refused or failed: `{"id":…,"ok":false,"error":{"code":…,"message":…}}`, with a `message` that's fine to show a person
+- needs a yes: `{"id":…,"ok":false,"needs":[{"id":…,"question":…}]}`, and nothing changed
 
 | Command | Answers with |
 | --- | --- |
-| `profiles <id>` | The profiles that can be offered, restricted groups, and config problems. |
-| `resolve <id> <name>` | The account's `uuid`, correctly capitalized `name`, `whitelisted`, `playedBefore`, and `triedToJoin` (how many times the whitelist turned it away) with `lastTried`. Warn before approving an account that has neither played nor tried. |
-| `show <id> <uuid or name>` | Their `profiles`, profiles they get `throughOtherGroups`, their `circles`, and `whitelisted`. |
-| `apply <id> <uuid> <name> [+profile] [-profile] [confirm=code,code] [whitelist=no] [via=leaf-juice]` | Adds and removes profiles, then whitelists them unless `whitelist=no`. |
-| `attempts <id>` | People turned away by the whitelist: name, uuid, count, first and last try. |
-| `log <id> [count]` | The last entries in `changes.log`, newest last. |
+| `profiles` | The profiles that can be offered, restricted groups, and config problems. |
+| `resolve <name>` | The account's `uuid`, correctly capitalized `name`, `whitelisted`, `playedBefore`, and `triedToJoin` (how many times the whitelist turned it away) with `lastTried`. Warn before approving an account that has neither played nor tried. |
+| `show <uuid or name>` | Their `profiles`, profiles they get `throughOtherGroups`, their `circles`, and `whitelisted`. |
+| `apply <uuid> <name> <add\|none> <remove\|none> [whitelist] [via]` | Adds and removes profiles (comma-separated lists), then whitelists them unless `whitelist` is `false`. `via` names who asked, such as `leaf-juice`. |
+| `attempts [limit] [cursor]` | People turned away by the whitelist: name, uuid, count, first and last try. `next` is the cursor for the next page. |
+| `log [limit]` | The last entries in `changes.log`, newest last. |
+| `reload` | Re-reads `config.yml`. |
+| `describe` | Every command with its typed arguments and its questions, format 1. |
 
 How `apply` works:
 
-- If a change needs a yes, the answer is `status: warn` with `warnings` (each has a `code` and `text`), and nothing changes. To go ahead, send the same command again with `confirm=` and those codes, such as `confirm=bridge`.
-- Sending the same request ID again after it went through returns the first answer with `replayed: true`. It isn't applied twice.
+- If a change needs a yes, the answer lists the questions and nothing changes. To go ahead, send the same command again with `--yes` and their ids, such as `--yes bridge` or `--yes confirm-grown-sky`.
+- Sending the same `--json` id again after it went through returns the first answer with `replayed: true`. It isn't applied twice.
 - Changes from the console are logged with `actor: Console` and the `via` you give.
 
 Example:
 
 ```
-> usher apply r42 069a79f4-44e9-4726-a5be-fca90e38aaf5 Notch +builders via=leaf-juice
-usher-result r42 {"status":"ok","code":"applied","message":"Notch is approved and can join now, with Builders.", ...}
+> usher apply 069a79f4-44e9-4726-a5be-fca90e38aaf5 Notch builders none true leaf-juice --json r42
+ea-result r42 {"id":"r42","ok":true,"status":"ok","code":"applied","message":"Notch is approved and can join now, with Builders.", ...}
 ```
 
 ## Events
